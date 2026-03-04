@@ -122,11 +122,12 @@ CATEGORIES = {
     "Movies & Shows": {
         "emoji": "&#127916;",
         "feeds": [
-            ("Variety", "https://variety.com/feed/"),
-            ("Hollywood Reporter", "https://www.hollywoodreporter.com/feed/"),
-            ("Deadline", "https://deadline.com/feed/"),
+            ("Rotten Tomatoes", "https://editorial.rottentomatoes.com/feed/"),
             ("Collider", "https://collider.com/feed/"),
             ("Screen Rant", "https://screenrant.com/feed/"),
+            ("IndieWire", "https://www.indiewire.com/feed/"),
+            ("Decider", "https://decider.com/feed/"),
+            ("Variety Film", "https://variety.com/v/film/feed/"),
         ],
     },
     "PC & PS5 Gaming": {
@@ -184,6 +185,10 @@ class Article:
     category: str = ""
     is_podcast: bool = False
     episode_duration: str = ""
+    image_url: str = ""
+
+
+ENTERTAINMENT_CATEGORIES = {"Movies & Shows", "PC & PS5 Gaming"}
 
 
 @dataclass
@@ -227,6 +232,23 @@ def fetch_articles(category_name: str, feeds: list[tuple[str, str]]) -> list[Art
                 if hasattr(entry, "summary"):
                     summary = re.sub(r"<[^>]+>", "", entry.summary)[:500]
 
+                # Extract image URL from RSS entry
+                image_url = ""
+                if hasattr(entry, "media_thumbnail") and entry.media_thumbnail:
+                    image_url = entry.media_thumbnail[0].get("url", "")
+                if not image_url and hasattr(entry, "media_content") and entry.media_content:
+                    for mc in entry.media_content:
+                        if mc.get("medium") == "image" or mc.get("type", "").startswith("image/"):
+                            image_url = mc.get("url", "")
+                            break
+                    if not image_url:
+                        image_url = entry.media_content[0].get("url", "")
+                if not image_url and hasattr(entry, "enclosures") and entry.enclosures:
+                    for enc in entry.enclosures:
+                        if enc.get("type", "").startswith("image/"):
+                            image_url = enc.get("href", enc.get("url", ""))
+                            break
+
                 articles.append(Article(
                     title=entry.get("title", "Untitled"),
                     link=entry.get("link", ""),
@@ -234,6 +256,7 @@ def fetch_articles(category_name: str, feeds: list[tuple[str, str]]) -> list[Art
                     published=published.isoformat() if published else "Unknown",
                     summary=summary,
                     category=category_name,
+                    image_url=image_url,
                 ))
         except Exception as e:
             print(f"  [WARN] Failed to fetch {source_name}: {e}", file=sys.stderr)
@@ -447,35 +470,115 @@ OUTPUT FORMAT — respond with valid JSON only, no markdown fences:
 
 Select the TOP 3-5 most interesting/important episodes or cross-show themes."""
 
+ENTERTAINMENT_SYSTEM_PROMPT = """You are an entertainment analyst for a daily digest. Your reader wants to know WHAT TO WATCH and WHAT TO PLAY next.
+
+EDITORIAL STANCE:
+- You are a knowledgeable friend who has read all the reviews and knows what's worth their time.
+- Lead with RECOMMENDATIONS, not industry business news. Skip box office numbers, studio executive changes, or production deals unless they directly affect what's available to watch/play.
+- For each story, answer: "Should I watch/play this? Why or why not?"
+
+PRIORITIZE (in order):
+1. New releases with strong or notable critical reception
+2. Upcoming releases generating significant buzz
+3. Hidden gems / under-the-radar recommendations
+4. Major franchise or sequel announcements worth knowing
+5. Streaming availability changes (new on Netflix, Disney+, Game Pass, etc.)
+
+INCLUDE FOR EACH STORY:
+- Review scores when available (Rotten Tomatoes %, Metacritic, OpenCritic)
+- Critical consensus — what do reviewers agree/disagree about?
+- Platform availability — WHERE can the reader watch/play this?
+- Genre and tone — help the reader know if it matches their taste
+- Similar titles — "If you liked X, you'll enjoy this"
+- Release date if upcoming, or "available now"
+
+FOR GAMING SPECIFICALLY:
+- Performance on PC vs PS5
+- Game length / value proposition
+- Early access vs full release status
+
+FIELDS:
+- "sentiment": "positive" = recommended, "negative" = skip, "mixed" = divisive, "neutral" = informational
+- "verification": "confirmed" for reviewed/released, "developing" for upcoming, "analysis" for editorial
+- "bias_spectrum": return empty array []
+- "image_url": pick the best image URL from the article data provided (movie poster, game art, screenshot). Return the URL exactly as given in the IMAGE field. If none available, return empty string.
+
+OUTPUT FORMAT — valid JSON only, no markdown fences:
+{
+  "section_summary": "1-2 sentence overview: what's worth watching/playing right now",
+  "stories": [
+    {
+      "headline": "Title — key takeaway (e.g. 'Recommended' or 'Worth the Wait')",
+      "analysis": "1-2 paragraph review/recommendation with scores, platforms, genre, comparisons.",
+      "key_facts": ["Review score / consensus", "Platform availability", "Release date or status"],
+      "sources": [{"name": "Source", "url": "https://..."}],
+      "sentiment": "positive|negative|mixed|neutral",
+      "verification": "confirmed|developing|analysis",
+      "bias_spectrum": [],
+      "image_url": "URL from article data or empty string"
+    }
+  ]
+}
+
+Select TOP 3-5 stories. Prioritize actionable recommendations. Merge overlapping coverage of the same title."""
+
 
 def analyze_category(client: anthropic.Anthropic, category: str, articles: list[Article]) -> dict:
     """Use Claude to analyze articles for a category."""
     if not articles:
         return {"section_summary": "No recent articles found.", "stories": []}
 
-    # Use richer formatting for podcast episodes
+    is_podcast_section = CATEGORIES.get(category, {}).get("is_podcast_section", False)
+    is_entertainment = category in ENTERTAINMENT_CATEGORIES
+
+    # Format article text — include image URLs for entertainment categories
     articles_text = "\n\n".join([
         (
             f"PODCAST EPISODE: {a.title}\nSHOW: {a.source}\nDATE: {a.published}\n"
             f"DURATION: {a.episode_duration}\nURL: {a.link}\nSHOW NOTES/DESCRIPTION:\n{a.summary}"
             if a.is_podcast else
-            f"TITLE: {a.title}\nSOURCE: {a.source}\nDATE: {a.published}\nURL: {a.link}\nSUMMARY: {a.summary}"
+            f"TITLE: {a.title}\nSOURCE: {a.source}\nDATE: {a.published}\nURL: {a.link}\n"
+            f"{'IMAGE: ' + a.image_url + chr(10) if a.image_url else ''}"
+            f"SUMMARY: {a.summary}"
         )
         for a in articles
     ])
 
-    is_podcast_section = CATEGORIES.get(category, {}).get("is_podcast_section", False)
+    if is_entertainment:
+        prompt = f"""Analyze the following {category} content from the last few days.
+Select the top 3-5 titles most relevant to someone deciding what to watch or play.
+Focus on reviews, recommendations, and new releases — skip pure industry/business news.
 
-    prompt = f"""Analyze the following {category} content from the last few days.
+ARTICLES:
+{articles_text}
+
+Remember: JSON only, no markdown code fences. Recommendation-focused.
+Include review scores and platform availability when possible.
+For image_url, pick the best image from the IMAGE fields provided for each story."""
+    elif is_podcast_section:
+        prompt = f"""Analyze the following {category} content from the last few days.
 Select the top 3-5 most important stories/episodes and provide balanced analysis.
 
-{"EPISODES" if is_podcast_section else "ARTICLES"}:
+EPISODES:
+{articles_text}
+
+Remember: JSON only, no markdown code fences, centrist perspective, facts first.
+Include verification level and bias_spectrum for each story."""
+    else:
+        prompt = f"""Analyze the following {category} content from the last few days.
+Select the top 3-5 most important stories/episodes and provide balanced analysis.
+
+ARTICLES:
 {articles_text}
 
 Remember: JSON only, no markdown code fences, centrist perspective, facts first.
 Include verification level and bias_spectrum for each story."""
 
-    system = PODCAST_SYSTEM_PROMPT if is_podcast_section else ANALYSIS_SYSTEM_PROMPT
+    system = (
+        PODCAST_SYSTEM_PROMPT if is_podcast_section
+        else ENTERTAINMENT_SYSTEM_PROMPT if is_entertainment
+        else ANALYSIS_SYSTEM_PROMPT
+    )
 
     try:
         response = client.messages.create(
@@ -492,12 +595,18 @@ Include verification level and bias_spectrum for each story."""
 
         result = json.loads(text)
 
-        # Ensure all stories have the new fields with defaults
+        # Ensure all stories have required fields with defaults
         for story in result.get("stories", []):
             if "verification" not in story:
                 story["verification"] = "confirmed"
             if "bias_spectrum" not in story:
                 story["bias_spectrum"] = []
+            if "image_url" not in story:
+                story["image_url"] = ""
+            # Validate image URL
+            img = story.get("image_url", "")
+            if img and not img.startswith("http"):
+                story["image_url"] = ""
 
         return result
     except json.JSONDecodeError as e:
