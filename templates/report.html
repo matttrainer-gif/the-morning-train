@@ -1883,7 +1883,7 @@
 <!-- ===== LIVE EVENTS JAVASCRIPT ===== -->
 <script>
 (function() {
-  const WORKER_URL = window.LIVE_WORKER_URL || localStorage.getItem("digest_worker_url") || "";
+  const WORKER_URL = window.LIVE_WORKER_URL || localStorage.getItem("digest_worker_url") || "https://morning-train.matttrainer.workers.dev";
 
   let currentCategory = "all";
   let autoRefreshInterval = null;
@@ -2010,7 +2010,7 @@
 
 // ===== INQUIRY DESK =====
 (function() {
-  const WORKER_URL = window.LIVE_WORKER_URL || localStorage.getItem("digest_worker_url") || "";
+  const WORKER_URL = window.LIVE_WORKER_URL || localStorage.getItem("digest_worker_url") || "https://morning-train.matttrainer.workers.dev";
 
   let currentStory = {};
   let conversationHistory = [];
