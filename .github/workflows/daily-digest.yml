@@ -44,6 +44,9 @@ jobs:
           OUTPUT_PATH: "docs/index.html"
         run: python generate_digest.py
 
+      - name: Copy static assets
+        run: cp -r assets/. docs/assets/ 2>/dev/null || true
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -1322,6 +1322,42 @@
     .header h1 { color: #111; }
     .header-corner { display: none; }
     .footer-skyline { display: none; }
+    .hero-banner { display: none; }
+  }
+
+  /* Hero banner */
+  .hero-banner {
+    width: 100%;
+    max-height: 320px;
+    overflow: hidden;
+    position: relative;
+    border-top: 2px solid var(--gold);
+    border-bottom: 2px solid var(--gold);
+  }
+  .hero-banner img {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+    object-position: center 40%;
+    display: block;
+    filter: sepia(0.3) contrast(1.1);
+  }
+  .hero-banner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(18,14,10,0.4) 0%,
+      rgba(18,14,10,0.05) 30%,
+      rgba(18,14,10,0.05) 70%,
+      rgba(18,14,10,0.5) 100%
+    );
+    pointer-events: none;
+  }
+  @media (max-width: 600px) {
+    .hero-banner img { height: 180px; }
+    .hero-banner { max-height: 180px; }
   }
 </style>
 </head>
@@ -1488,6 +1524,11 @@
     <div class="rule-thick"></div>
     <div class="rule-thin"></div>
   </div>
+</div>
+
+<!-- ===== HERO BANNER ===== -->
+<div class="hero-banner">
+  <img src="assets/hero-train.jpg" alt="The Morning Train — vintage steam locomotive">
 </div>
 
 <!-- ===== NAV (Train Station Departure Board) ===== -->
