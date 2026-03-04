@@ -480,7 +480,7 @@ Include verification level and bias_spectrum for each story."""
     try:
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2500,
+            max_tokens=4096,
             system=system,
             messages=[{"role": "user", "content": prompt}],
         )
