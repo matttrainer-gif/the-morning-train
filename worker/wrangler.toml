@@ -12,7 +12,6 @@ compatibility_date = "2024-01-01"
 #   npx wrangler kv namespace create PREFS
 # Then paste the ID below:
 
-# Uncomment after creating the KV namespace and filling in the ID:
-# [[kv_namespaces]]
-# binding = "PREFS"
-# id = "YOUR_KV_NAMESPACE_ID_HERE"
+[[kv_namespaces]]
+binding = "PREFS"
+id = "8b689547ca824afaaff5ab622e6940cc"
