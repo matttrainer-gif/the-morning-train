@@ -725,6 +725,47 @@
     transition: opacity 0.2s;
   }
   .section-empty .section-header:hover { opacity: 0.8; }
+
+  /* Collapsible sections */
+  .section-header { cursor: pointer; user-select: none; }
+  .section-header .collapse-icon {
+    margin-left: auto;
+    margin-right: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--gold);
+    opacity: 0.6;
+    transition: transform 0.25s, opacity 0.2s;
+  }
+  .section-header:hover .collapse-icon { opacity: 1; }
+  .section.collapsed .section-stories { display: none; }
+  .section.collapsed .section-summary { display: none; }
+  .section.collapsed .collapse-icon { transform: rotate(-90deg); }
+
+  /* Collapsible stories */
+  .story-header { cursor: pointer; user-select: none; }
+  .story-header .story-toggle {
+    font-size: 0.6rem;
+    color: var(--gold);
+    opacity: 0.5;
+    transition: transform 0.25s, opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .story-header:hover .story-toggle { opacity: 0.9; }
+  .story.collapsed .story-body { display: none; }
+  .story.collapsed .story-toggle { transform: rotate(-90deg); }
+
+  /* Analysis toggle */
+  .analysis { display: none; }
+  .analysis.expanded { display: block; }
+  .analysis-toggle {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .analysis-toggle:hover { opacity: 1; color: var(--gold); }
   .section-empty-body {
     max-height: 0;
     overflow: hidden;
@@ -1566,12 +1607,13 @@
 {% if cat.stories %}
 <section class="section {% if 'Podcast' in cat.name %}section-podcast{% endif %}" id="{{ cat.name | lower | replace(' ', '-') | replace('&', '') | replace('  ', '-') }}">
   <!-- Train station sign section header -->
-  <div class="section-header">
+  <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
     <span class="section-icon">{{ cat.emoji | safe }}</span>
     <div class="section-title-area">
       <div class="section-platform">Platform {{ loop.index }}</div>
       <h2>{{ cat.name }}</h2>
     </div>
+    <span class="collapse-icon">&#9660;</span>
     <span class="rivet r1"></span>
     <span class="rivet r2"></span>
   </div>
@@ -1580,9 +1622,10 @@
   <div class="section-summary">{{ cat.summary }}</div>
   {% endif %}
 
+  <div class="section-stories">
   {% for story in cat.stories %}
   <article class="story">
-    <div class="story-header">
+    <div class="story-header" onclick="this.parentElement.classList.toggle('collapsed')">
       <h3>{{ story.headline }}</h3>
       <div style="display:flex; gap:0.3rem; align-items:center; flex-shrink:0;">
         {% if story.verification %}
@@ -1594,11 +1637,11 @@
         {% if story.sentiment %}
         <span class="sentiment sentiment-{{ story.sentiment }}">{{ story.sentiment }}</span>
         {% endif %}
+        <span class="story-toggle">&#9660;</span>
       </div>
     </div>
 
-    <div class="analysis">{{ story.analysis }}</div>
-
+    <div class="story-body">
     {% if story.key_facts %}
     <div class="key-facts">
       <div class="key-facts-label">Key Facts</div>
@@ -1609,6 +1652,9 @@
       </ul>
     </div>
     {% endif %}
+
+    <div class="analysis-toggle" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('expanded'); this.textContent = this.nextElementSibling.classList.contains('expanded') ? '&#9660; Hide Summary' : '&#9654; Show Summary';">&#9654; Show Summary</div>
+    <div class="analysis">{{ story.analysis }}</div>
 
     {% if story.bias_spectrum and story.bias_spectrum | length > 0 %}
     <div class="bias-spectrum">
@@ -1645,12 +1691,14 @@
     {% endif %}
 
     <div class="story-actions">
-      <button class="inquiry-btn" onclick="openInquiry(this)" data-headline="{{ story.headline }}" data-analysis="{{ story.analysis }}" data-facts="{{ story.key_facts | join('|||') if story.key_facts else '' }}" data-sources="{{ story.sources | tojson if story.sources else '[]' }}">
+      <button class="inquiry-btn" onclick="event.stopPropagation(); openInquiry(this)" data-headline="{{ story.headline }}" data-analysis="{{ story.analysis }}" data-facts="{{ story.key_facts | join('|||') if story.key_facts else '' }}" data-sources="{{ story.sources | tojson if story.sources else '[]' }}">
         <i class="inquiry-icon">&#9998;</i> Investigate
       </button>
     </div>
+    </div>
   </article>
   {% endfor %}
+  </div>
 </section>
 {% else %}
 <!-- Collapsed empty section -->
