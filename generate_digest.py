@@ -134,6 +134,16 @@ CATEGORIES = {
             ("Variety Film", "https://variety.com/v/film/feed/"),
         ],
     },
+    "Kit Lazer Picks": {
+        "emoji": "&#127909;",
+        "feeds": [
+            ("Kit Lazer (Letterboxd)", "https://letterboxd.com/moviesrtherapy/rss/"),
+            ("Kit Lazer (Substack)", "https://www.kitlazer.com/feed"),
+            ("Kit Lazer (YouTube)", "https://www.youtube.com/feeds/videos.xml?channel_id=UC3H6kMvdk1mLZNycrZHDe7A"),
+            ("Streaming Things Podcast", "https://feeds.acast.com/public/shows/65df83fb542232001502084a"),
+            ("Kit Lazer (Bluesky)", "https://bsky.app/profile/moviesaretherapy.bsky.social/rss"),
+        ],
+    },
     "PC & PS5 Gaming": {
         "emoji": "&#127918;",
         "feeds": [
@@ -193,7 +203,7 @@ class Article:
     image_url: str = ""
 
 
-ENTERTAINMENT_CATEGORIES = {"Movies & Shows", "PC & PS5 Gaming"}
+ENTERTAINMENT_CATEGORIES = {"Movies & Shows", "PC & PS5 Gaming", "Kit Lazer Picks"}
 
 
 @dataclass
@@ -213,13 +223,17 @@ class AnalyzedStory:
 
 def fetch_articles(category_name: str, feeds: list[tuple[str, str]]) -> list[Article]:
     """Fetch recent articles from RSS feeds for a category."""
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
+    is_kit_lazer = category_name == "Kit Lazer Picks"
+    lookback = LOOKBACK_HOURS * 12 if is_kit_lazer else LOOKBACK_HOURS  # 14 days for Kit Lazer
+    max_articles = 30 if is_kit_lazer else MAX_ARTICLES_PER_CATEGORY
+    entries_per_feed = 20 if is_kit_lazer else 10
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback)
     articles = []
 
     for source_name, feed_url in feeds:
         try:
             feed = feedparser.parse(feed_url)
-            for entry in feed.entries[:10]:
+            for entry in feed.entries[:entries_per_feed]:
                 # Parse published date
                 published = None
                 if hasattr(entry, "published_parsed") and entry.published_parsed:
@@ -277,7 +291,7 @@ def fetch_articles(category_name: str, feeds: list[tuple[str, str]]) -> list[Art
 
     # Sort by date (newest first), limit
     unique.sort(key=lambda a: a.published if a.published != "Unknown" else "", reverse=True)
-    return unique[:MAX_ARTICLES_PER_CATEGORY]
+    return unique[:max_articles]
 
 
 def fetch_podcast_episodes(category_name: str, podcasts: list[tuple[str, str]]) -> list[Article]:
@@ -528,6 +542,62 @@ OUTPUT FORMAT — valid JSON only, no markdown fences:
 Select TOP 3-5 stories. Prioritize actionable recommendations. Merge overlapping coverage of the same title."""
 
 
+KIT_LAZER_SYSTEM_PROMPT = """You are building a movie & TV recommendation guide from Kit Lazer's (@moviesaretherapy) content.
+Kit Lazer is a TRUSTED critic — treat his opinions as authoritative recommendations, not just one opinion among many.
+
+YOUR TASK:
+- Synthesize his Letterboxd diary entries, Substack essays, YouTube videos, podcast episodes, and social posts
+- When the same title appears across multiple sources (e.g. rated on Letterboxd AND discussed on his podcast), MERGE them into a single entry
+- Extract his star rating from Letterboxd data (look for ★ characters — count them, half-stars count as 0.5)
+- Categorize each pick by availability
+
+AVAILABILITY CATEGORIES (assign exactly one per pick):
+- "streaming" — available now on a streaming platform
+- "in_theaters" — currently in theatrical release
+- "coming_soon" — not yet released, upcoming
+- "classic" — older film/show he's rewatching or recommending from his archive
+
+PRIORITIZE:
+1. Titles he rated highly (4+ stars) — these are his strongest recommendations
+2. Titles he wrote about at length (Substack essays, long podcast discussions)
+3. Recent theatrical releases he reviewed
+4. Streaming picks and hidden gems
+5. Older classics he's championing
+
+FOR EACH PICK, INCLUDE:
+- His star rating if available (from Letterboxd ★ symbols)
+- Which streaming service or if in theaters
+- Genre classification
+- Release year
+- His actual opinion/take, not a generic summary
+
+OUTPUT FORMAT — valid JSON only, no markdown fences:
+{
+  "section_summary": "1-2 sentence overview of Kit Lazer's current recommendations and what he's excited about",
+  "stories": [
+    {
+      "headline": "Movie/Show Title (Year)",
+      "analysis": "Kit Lazer's take — why he recommends (or doesn't recommend) this. Include his actual opinions and insights.",
+      "key_facts": ["His rating: X/5", "Streaming on [Platform]" or "In theaters now", "Genre: Thriller/Drama/etc"],
+      "sources": [{"name": "Source Name", "url": "https://..."}],
+      "sentiment": "positive|negative|mixed|neutral",
+      "verification": "confirmed",
+      "bias_spectrum": [],
+      "image_url": "URL from article data or empty string",
+      "availability": "streaming|in_theaters|coming_soon|classic",
+      "rating": 4.5,
+      "year": 2026,
+      "genre": "Thriller"
+    }
+  ]
+}
+
+Select 8-12 picks to build a comprehensive guide. Sort by his enthusiasm (highest-rated first).
+For rating: use a number 0-5 (supports 0.5 increments). If no rating found, use 0.
+For year: use the film/show release year as an integer. If unknown, use 0.
+For genre: use a single primary genre word (Thriller, Drama, Comedy, Horror, Action, Sci-Fi, Documentary, Animation, Romance, etc)."""
+
+
 def analyze_category(client: anthropic.Anthropic, category: str, articles: list[Article]) -> dict:
     """Use Claude to analyze articles for a category."""
     if not articles:
@@ -535,6 +605,7 @@ def analyze_category(client: anthropic.Anthropic, category: str, articles: list[
 
     is_podcast_section = CATEGORIES.get(category, {}).get("is_podcast_section", False)
     is_entertainment = category in ENTERTAINMENT_CATEGORIES
+    is_kit_lazer = category == "Kit Lazer Picks"
 
     # Format article text — include image URLs for entertainment categories
     articles_text = "\n\n".join([
@@ -549,7 +620,19 @@ def analyze_category(client: anthropic.Anthropic, category: str, articles: list[
         for a in articles
     ])
 
-    if is_entertainment:
+    if is_kit_lazer:
+        prompt = f"""Analyze the following content from Kit Lazer (@moviesaretherapy) across his platforms.
+Build a comprehensive recommendation guide from his recent reviews, ratings, and discussions.
+Select 8-12 of his strongest and most interesting picks.
+
+CONTENT FROM KIT LAZER'S PLATFORMS:
+{articles_text}
+
+Remember: JSON only, no markdown fences.
+Extract star ratings from Letterboxd ★ symbols. Categorize each pick's availability.
+Merge multiple sources discussing the same title into one entry.
+Include availability, rating (0-5), year (integer), and genre for EVERY story."""
+    elif is_entertainment:
         prompt = f"""Analyze the following {category} content from the last few days.
 Select the top 3-5 titles most relevant to someone deciding what to watch or play.
 Focus on reviews, recommendations, and new releases — skip pure industry/business news.
@@ -580,15 +663,17 @@ Remember: JSON only, no markdown code fences, centrist perspective, facts first.
 Include verification level and bias_spectrum for each story."""
 
     system = (
-        PODCAST_SYSTEM_PROMPT if is_podcast_section
+        KIT_LAZER_SYSTEM_PROMPT if is_kit_lazer
+        else PODCAST_SYSTEM_PROMPT if is_podcast_section
         else ENTERTAINMENT_SYSTEM_PROMPT if is_entertainment
         else ANALYSIS_SYSTEM_PROMPT
     )
 
     try:
+        max_tokens = 8192 if is_kit_lazer else 4096
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=4096,
+            max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -608,6 +693,15 @@ Include verification level and bias_spectrum for each story."""
                 story["bias_spectrum"] = []
             if "image_url" not in story:
                 story["image_url"] = ""
+            # Kit Lazer-specific field defaults
+            if "availability" not in story:
+                story["availability"] = ""
+            if "rating" not in story:
+                story["rating"] = 0
+            if "year" not in story:
+                story["year"] = 0
+            if "genre" not in story:
+                story["genre"] = ""
             # Validate image URL
             img = story.get("image_url", "")
             if img and not img.startswith("http"):

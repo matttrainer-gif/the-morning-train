@@ -1405,6 +1405,147 @@
     .hero-banner { display: none; }
   }
 
+  /* ===== KIT LAZER PICKS SECTION ===== */
+  .section-kit-lazer .section-header::before {
+    background: linear-gradient(90deg, #8a2e2e, #c44040, #8a2e2e);
+  }
+  .section-kit-lazer .story::before {
+    background: #c44040;
+  }
+  .section-kit-lazer .section-summary {
+    border-left-color: #c44040;
+  }
+
+  /* Filter bar */
+  .kl-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+  .kl-tabs {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+  .kl-tab {
+    font-family: var(--font-label);
+    font-size: 0.62rem;
+    padding: 0.3rem 0.55rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .kl-tab:hover { border-color: #c44040; color: var(--cream); }
+  .kl-tab.active {
+    background: #c44040;
+    border-color: #c44040;
+    color: var(--cream);
+  }
+  .kl-year-filter select {
+    font-family: var(--font-label);
+    font-size: 0.62rem;
+    padding: 0.3rem 0.45rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-genre-filter {
+    display: flex;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+  .kl-genre-pill {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-genre-pill:hover { border-color: #c44040; color: var(--cream); }
+  .kl-genre-pill.active {
+    background: rgba(196,64,64,0.2);
+    border-color: #c44040;
+    color: #e8c0c0;
+  }
+
+  /* Card grid */
+  .kl-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .kl-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .kl-grid .story { margin-bottom: 0; }
+
+  /* Star rating */
+  .kl-rating {
+    font-size: 0.85rem;
+    color: #c9a84c;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Availability badge */
+  .kl-availability {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .kl-availability-streaming { background: rgba(122,184,122,0.15); color: var(--positive); }
+  .kl-availability-in_theaters { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .kl-availability-coming_soon { background: rgba(155,125,201,0.15); color: var(--podcast-color); }
+  .kl-availability-classic { background: rgba(168,152,128,0.15); color: var(--neutral); }
+
+  .kl-meta {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.65rem;
+  }
+  .kl-meta-tag {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Hidden cards (filtered out) */
+  .kl-grid .story.kl-hidden {
+    display: none;
+  }
+
   /* Hero banner */
   .hero-banner {
     width: 100%;
@@ -1644,12 +1785,16 @@
 {% endif %}
 
 {% if cat.stories %}
-<section class="section {% if 'Podcast' in cat.name %}section-podcast{% endif %}" id="{{ cat.name | lower | replace(' ', '-') | replace('&', '') | replace('  ', '-') }}">
+<section class="section {% if 'Podcast' in cat.name %}section-podcast{% elif 'Kit Lazer' in cat.name %}section-kit-lazer{% endif %}" id="{{ cat.name | lower | replace(' ', '-') | replace('&', '') | replace('  ', '-') }}">
   <!-- Train station sign section header -->
   <div class="section-header" onclick="this.parentElement.classList.toggle('collapsed')">
     <span class="section-icon">{{ cat.emoji | safe }}</span>
     <div class="section-title-area">
+      {% if 'Kit Lazer' in cat.name %}
+      <div class="section-platform">The Critic's Booth</div>
+      {% else %}
       <div class="section-platform">Platform {{ loop.index }}</div>
+      {% endif %}
       <h2>{{ cat.name }}</h2>
     </div>
     <span class="collapse-icon">&#9660;</span>
@@ -1661,6 +1806,94 @@
   <div class="section-summary">{{ cat.summary }}</div>
   {% endif %}
 
+  {% if 'Kit Lazer' in cat.name %}
+  <!-- Kit Lazer filter bar -->
+  <div class="kl-filters" id="klFilters">
+    <div class="kl-tabs">
+      <button class="kl-tab active" data-filter="all">All</button>
+      <button class="kl-tab" data-filter="in_theaters">In Theaters</button>
+      <button class="kl-tab" data-filter="streaming">Streaming</button>
+      <button class="kl-tab" data-filter="coming_soon">Coming Soon</button>
+      <button class="kl-tab" data-filter="classic">Classics</button>
+    </div>
+    <div class="kl-year-filter">
+      <select id="klYearFilter">
+        <option value="all">All Years</option>
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="older">Older</option>
+      </select>
+    </div>
+    <div class="kl-genre-filter" id="klGenreFilter"></div>
+  </div>
+
+  <div class="section-stories kl-grid" id="klGrid">
+  {% for story in cat.stories %}
+  <article class="story"
+           data-availability="{{ story.availability }}"
+           data-year="{{ story.year }}"
+           data-genre="{{ story.genre }}"
+           data-rating="{{ story.rating }}">
+    <div class="story-header" onclick="this.parentElement.classList.toggle('collapsed')">
+      <h3>{{ story.headline }}</h3>
+      <div style="display:flex; gap:0.3rem; align-items:center; flex-shrink:0;">
+        <span class="kl-rating" data-rating="{{ story.rating }}"></span>
+        <span class="story-toggle">&#9660;</span>
+      </div>
+    </div>
+
+    <div class="story-body">
+    {% if story.image_url %}
+    <img class="story-image story-image-wide"
+         src="{{ story.image_url }}"
+         alt="{{ story.headline }}"
+         loading="lazy"
+         onerror="this.style.display='none'">
+    {% endif %}
+
+    <div class="kl-meta">
+      {% if story.availability %}
+      <span class="kl-availability kl-availability-{{ story.availability }}">
+        {% if story.availability == 'streaming' %}&#9654; Streaming{% elif story.availability == 'in_theaters' %}&#127916; In Theaters{% elif story.availability == 'coming_soon' %}&#128337; Coming Soon{% elif story.availability == 'classic' %}&#127942; Classic{% else %}{{ story.availability }}{% endif %}
+      </span>
+      {% endif %}
+      {% if story.year and story.year != 0 %}
+      <span class="kl-meta-tag">{{ story.year }}</span>
+      {% endif %}
+      {% if story.genre %}
+      <span class="kl-meta-tag">{{ story.genre }}</span>
+      {% endif %}
+    </div>
+
+    {% if story.key_facts %}
+    <div class="key-facts">
+      <div class="key-facts-label">Key Facts</div>
+      <ul>
+        {% for fact in story.key_facts %}
+        <li>{{ fact }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="analysis-toggle" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('expanded'); this.textContent = this.nextElementSibling.classList.contains('expanded') ? '&#9660; Hide Summary' : '&#9654; Show Summary';">&#9654; Show Summary</div>
+    <div class="analysis">{{ story.analysis }}</div>
+
+    {% if story.sources %}
+    <div class="sources">
+      {% for src in story.sources %}
+      <a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.name }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Standard section layout -->
   <div class="section-stories">
   {% for story in cat.stories %}
   <article class="story">
@@ -1745,6 +1978,7 @@
   </article>
   {% endfor %}
   </div>
+  {% endif %}
 </section>
 {% else %}
 <!-- Collapsed empty section -->
@@ -2303,6 +2537,104 @@
     const div = document.createElement("div");
     div.textContent = str || "";
     return div.innerHTML;
+  }
+})();
+</script>
+
+<!-- ===== KIT LAZER FILTERS JAVASCRIPT ===== -->
+<script>
+(function() {
+  const grid = document.getElementById('klGrid');
+  if (!grid) return; // No Kit Lazer section
+
+  const cards = grid.querySelectorAll('.story');
+  let activeTab = 'all';
+  let activeYear = 'all';
+  let activeGenre = 'all';
+
+  // Render star ratings
+  cards.forEach(function(card) {
+    const ratingEl = card.querySelector('.kl-rating');
+    if (!ratingEl) return;
+    const rating = parseFloat(ratingEl.dataset.rating) || 0;
+    if (rating === 0) { ratingEl.textContent = ''; return; }
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+      if (rating >= i) stars += '\u2605';
+      else if (rating >= i - 0.5) stars += '\u00BD';
+      else stars += '\u2606';
+    }
+    ratingEl.textContent = stars;
+  });
+
+  // Build genre pills dynamically
+  const genreFilter = document.getElementById('klGenreFilter');
+  if (genreFilter) {
+    const genres = new Set();
+    cards.forEach(function(card) {
+      const g = card.dataset.genre;
+      if (g) genres.add(g);
+    });
+    genres.forEach(function(genre) {
+      const btn = document.createElement('button');
+      btn.className = 'kl-genre-pill';
+      btn.dataset.genre = genre;
+      btn.textContent = genre;
+      btn.addEventListener('click', function() {
+        if (this.classList.contains('active')) {
+          this.classList.remove('active');
+          activeGenre = 'all';
+        } else {
+          genreFilter.querySelectorAll('.kl-genre-pill').forEach(function(b) { b.classList.remove('active'); });
+          this.classList.add('active');
+          activeGenre = this.dataset.genre;
+        }
+        filterCards();
+      });
+      genreFilter.appendChild(btn);
+    });
+  }
+
+  // Tab filtering
+  var tabs = document.querySelectorAll('#klFilters .kl-tab');
+  tabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      activeTab = this.dataset.filter;
+      filterCards();
+    });
+  });
+
+  // Year filtering
+  var yearSelect = document.getElementById('klYearFilter');
+  if (yearSelect) {
+    yearSelect.addEventListener('change', function() {
+      activeYear = this.value;
+      filterCards();
+    });
+  }
+
+  function filterCards() {
+    cards.forEach(function(card) {
+      var show = true;
+      // Tab filter
+      if (activeTab !== 'all' && card.dataset.availability !== activeTab) show = false;
+      // Year filter
+      if (activeYear !== 'all') {
+        var cardYear = parseInt(card.dataset.year) || 0;
+        if (activeYear === 'older') {
+          if (cardYear >= 2024 || cardYear === 0) show = false;
+        } else {
+          if (cardYear !== parseInt(activeYear)) show = false;
+        }
+      }
+      // Genre filter
+      if (activeGenre !== 'all' && card.dataset.genre !== activeGenre) show = false;
+
+      if (show) card.classList.remove('kl-hidden');
+      else card.classList.add('kl-hidden');
+    });
   }
 })();
 </script>
