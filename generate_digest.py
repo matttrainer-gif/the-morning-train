@@ -69,6 +69,10 @@ CATEGORIES = {
             ("Fox News – Politics", "https://moxie.foxnews.com/google-publisher/politics.xml"),
             ("Reason", "https://reason.com/feed/"),
             ("The Free Press", "https://www.thefp.com/feed"),
+            # --- Breaking news / wire ---
+            ("Aaron Parnas (Substack)", "https://aaronparnas.substack.com/feed"),
+            ("Aaron Parnas (Bluesky)", "https://bsky.app/profile/aaronparnas.bsky.social/rss"),
+            ("SilentMiddleChild (YouTube)", "https://www.youtube.com/feeds/videos.xml?channel_id=UCWvlb_Yav61rrG-axlKTZiA"),
         ],
         "podcasts": [
             # --- Center-left ---
@@ -76,13 +80,13 @@ CATEGORIES = {
             ("NYT The Daily", "https://feeds.simplecast.com/54nAGcIl"),
             ("NPR Up First", "https://feeds.npr.org/510318/podcast.xml"),
             # --- Heterodox / center ---
-            ("Real Time with Bill Maher", "https://feeds.megaphone.fm/real-time-with-bill-maher"),
+            ("Real Time with Bill Maher", "https://feeds.megaphone.fm/WMHY1886903044"),
             # --- Center-right / right ---
-            ("Advisory Opinions (The Dispatch)", "https://feeds.megaphone.fm/advisory-opinions"),
-            ("The Remnant – Jonah Goldberg", "https://feeds.megaphone.fm/the-remnant"),
-            ("The Megyn Kelly Show", "https://feeds.megaphone.fm/megynkellyshow"),
-            ("Honestly – Bari Weiss", "https://feeds.megaphone.fm/honestly"),
-            ("The Ben Shapiro Show", "https://feeds.megaphone.fm/WWO3519750118"),
+            ("Advisory Opinions (The Dispatch)", "https://feeds.megaphone.fm/DISPME4573820108"),
+            ("The Remnant – Jonah Goldberg", "https://feeds.megaphone.fm/DISPME4897766830"),
+            ("The Megyn Kelly Show", "https://feeds.simplecast.com/RV1USAfC"),
+            ("Honestly – Bari Weiss", "https://feeds.megaphone.fm/RSV2347142881"),
+            ("The Ben Shapiro Show", "https://feeds.megaphone.fm/BVDWV5370667266"),
         ],
     },
     "World Politics": {
@@ -152,19 +156,20 @@ CATEGORIES = {
             ("Hard Fork (NYT)", "https://feeds.simplecast.com/l2i9YnTd"),
             # --- Heterodox / center ---
             ("Making Sense – Sam Harris", "https://wakingup.libsyn.com/rss"),
-            ("All-In Podcast", "https://feeds.megaphone.fm/all-in-with-chamath-jason-sacks-and-friedberg"),
-            ("Real Time with Bill Maher", "https://feeds.megaphone.fm/real-time-with-bill-maher"),
-            ("Club Random with Bill Maher", "https://feeds.simplecast.com/jBp_kwbg"),
-            ("Honestly – Bari Weiss", "https://feeds.megaphone.fm/honestly"),
+            ("All-In Podcast", "https://allinchamathjason.libsyn.com/rss"),
+            ("Real Time with Bill Maher", "https://feeds.megaphone.fm/WMHY1886903044"),
+            ("Club Random with Bill Maher", "https://feeds.megaphone.fm/MCI6910680963"),
+            ("Honestly – Bari Weiss", "https://feeds.megaphone.fm/RSV2347142881"),
             # --- Center-right / right ---
-            ("Advisory Opinions (The Dispatch)", "https://feeds.megaphone.fm/advisory-opinions"),
-            ("The Remnant – Jonah Goldberg", "https://feeds.megaphone.fm/the-remnant"),
-            ("The Megyn Kelly Show", "https://feeds.megaphone.fm/megynkellyshow"),
-            ("The Ben Shapiro Show", "https://feeds.megaphone.fm/WWO3519750118"),
+            ("Advisory Opinions (The Dispatch)", "https://feeds.megaphone.fm/DISPME4573820108"),
+            ("The Remnant – Jonah Goldberg", "https://feeds.megaphone.fm/DISPME4897766830"),
+            ("The Megyn Kelly Show", "https://feeds.simplecast.com/RV1USAfC"),
+            ("The Ben Shapiro Show", "https://feeds.megaphone.fm/BVDWV5370667266"),
         ],
         "is_podcast_section": True,
     },
 }
+
 
 MAX_ARTICLES_PER_CATEGORY = 15   # fetched from feeds
 MAX_STORIES_PER_CATEGORY = 5     # after Claude selects the best
