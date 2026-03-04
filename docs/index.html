@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Morning Train</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Oswald:wght@300;400&display=swap');
+  body {
+    font-family: 'Playfair Display', Georgia, serif;
+    background: #1a1510;
+    color: #e8dcc8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+  }
+  .msg { max-width: 500px; padding: 2rem; }
+  .deco-top {
+    display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 1rem; opacity: 0.5;
+  }
+  .deco-top .wing { flex: 1; max-width: 80px; height: 1px; background: linear-gradient(90deg, transparent, #c9a84c); }
+  .deco-top .wing.r { background: linear-gradient(90deg, #c9a84c, transparent); }
+  .deco-top .diamond { width: 6px; height: 6px; background: #c9a84c; transform: rotate(45deg); }
+  .tagline {
+    font-family: 'Oswald', sans-serif;
+    color: #c9a84c;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin-bottom: 0.5rem;
+  }
+  h1 { font-size: 2.4rem; margin-bottom: 0.3rem; font-weight: 800; }
+  p { color: #a89880; line-height: 1.6; font-size: 0.95rem; }
+  .clock-small {
+    width: 80px; height: 80px; margin: 1.2rem auto 0.5rem;
+    opacity: 0.4;
+  }
+</style>
+</head>
+<body>
+  <div class="msg">
+    <div class="deco-top">
+      <div class="wing"></div>
+      <div class="diamond"></div>
+      <div class="wing r"></div>
+    </div>
+    <div class="tagline">Est. MMXXVI &middot; All Stations</div>
+    <h1>The Morning Train</h1>
+    <svg class="clock-small" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="95" fill="none" stroke="#c9a84c" stroke-width="2"/>
+      <g stroke="#c9a84c" stroke-width="2">
+        <line x1="100" y1="15" x2="100" y2="28"/>
+        <line x1="185" y1="100" x2="172" y2="100"/>
+        <line x1="100" y1="185" x2="100" y2="172"/>
+        <line x1="15" y1="100" x2="28" y2="100"/>
+      </g>
+      <line x1="100" y1="100" x2="100" y2="52" stroke="#c9a84c" stroke-width="3.5" stroke-linecap="round"/>
+      <line x1="100" y1="100" x2="140" y2="80" stroke="#e8dcc8" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="100" cy="100" r="4" fill="#c9a84c"/>
+    </svg>
+    <p>Your morning dispatch hasn't been filed yet. Trigger the GitHub Action manually or wait for the next scheduled departure.</p>
+  </div>
+</body>
+</html>

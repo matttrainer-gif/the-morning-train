@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Morning Train — {{ date_short }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Oswald:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=UnifrakturMaguntia&display=swap');
+
+  :root {
+    --bg: #1a1510;
+    --bg-warm: #1e1914;
+    --surface: #252019;
+    --surface-2: #2e2820;
+    --surface-3: #3a3228;
+    --border: #4a3f32;
+    --border-light: #5c4f3e;
+    --text: #e8dcc8;
+    --text-muted: #a89880;
+    --text-dim: #7a6d5c;
+    --gold: #c9a84c;
+    --gold-bright: #ddb94e;
+    --gold-dim: #8a7535;
+    --gold-dark: #6b5a28;
+    --copper: #b87333;
+    --copper-dim: #8a5627;
+    --cream: #f0e6d0;
+    --positive: #7ab87a;
+    --negative: #c47474;
+    --neutral: #a89880;
+    --mixed: #c9a84c;
+    --live-red: #c44040;
+    --live-red-dim: #8a2e2e;
+    --podcast-color: #9b7dc9;
+    --podcast-dim: #6b5490;
+    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-body: 'Source Serif 4', 'Crimson Text', Georgia, serif;
+    --font-label: 'Oswald', 'Trebuchet MS', sans-serif;
+    --font-gothic: 'UnifrakturMaguntia', 'Playfair Display', Georgia, serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15.5px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(201,168,76,0.03) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(184,115,51,0.03) 0%, transparent 60%);
+    min-height: 100vh;
+  }
+
+  /* ===== ART DECO GEOMETRIC PATTERNS ===== */
+  .deco-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 0.5rem auto;
+    width: 280px;
+    height: 12px;
+    opacity: 0.6;
+  }
+  .deco-line .dl-wing {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold));
+  }
+  .deco-line .dl-wing.right {
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+  .deco-line .dl-diamond {
+    width: 8px;
+    height: 8px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+  .deco-line .dl-circle {
+    width: 5px;
+    height: 5px;
+    border: 1px solid var(--gold);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin: 0 3px;
+  }
+
+  /* ===== MASTHEAD / HEADER ===== */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 1.5rem 1.75rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent 5%, var(--gold-dark) 15%, var(--gold) 35%, var(--gold-bright) 50%, var(--gold) 65%, var(--gold-dark) 85%, transparent 95%);
+  }
+  .header::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  }
+
+  /* Art deco corner ornaments */
+  .header-corner {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    opacity: 0.25;
+  }
+  .header-corner svg { width: 100%; height: 100%; }
+  .header-corner.tl { top: 8px; left: 12px; }
+  .header-corner.tr { top: 8px; right: 12px; transform: scaleX(-1); }
+  .header-corner.bl { bottom: 8px; left: 12px; transform: scaleY(-1); }
+  .header-corner.br { bottom: 8px; right: 12px; transform: scale(-1,-1); }
+
+  /* Newspaper masthead top rule */
+  .masthead-rule-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 0.6rem;
+  }
+  .masthead-rule-top .rule-line {
+    flex: 1;
+    max-width: 200px;
+    height: 0;
+    border-top: 2px solid var(--gold-dark);
+    border-bottom: 1px solid var(--gold-dark);
+    padding-top: 2px;
+  }
+  .masthead-rule-top .rule-ornament {
+    color: var(--gold);
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+  }
+
+  .header .edition-label {
+    font-family: var(--font-label);
+    color: var(--gold-dim);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.35em;
+    font-weight: 300;
+    margin-bottom: 0.1rem;
+  }
+  .header .tagline {
+    font-family: var(--font-label);
+    color: var(--gold);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    font-weight: 400;
+  }
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--cream);
+    line-height: 1.05;
+    margin-top: 0.15rem;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .header .subtitle {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-top: 0.15rem;
+    font-weight: 400;
+  }
+
+  /* Header flex layout — clock left, title center, weather right */
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+  .header-center { flex: 1; max-width: 500px; }
+
+  /* ===== ANALOG CLOCK ===== */
+  .clock-container {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    display: none; /* shown on wider screens */
+  }
+  @media (min-width: 700px) {
+    .clock-container { display: block; }
+  }
+  .clock-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+  }
+
+  .header .date {
+    font-family: var(--font-label);
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  /* Masthead bottom rule */
+  .masthead-rule-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 0.7rem;
+  }
+  .masthead-rule-bottom .rule-thick {
+    flex: 1;
+    max-width: 160px;
+    height: 2px;
+    background: var(--gold-dark);
+  }
+  .masthead-rule-bottom .rule-thin {
+    flex: 1;
+    max-width: 80px;
+    height: 1px;
+    background: var(--border);
+  }
+  .masthead-rule-bottom .rule-dot {
+    width: 4px;
+    height: 4px;
+    background: var(--gold);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ===== NAV (Train Station Departure Board) ===== */
+  .nav {
+    background: #111;
+    border-bottom: 2px solid var(--gold-dark);
+    padding: 0;
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .nav::before {
+    content: "DEPARTURES";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-label);
+    font-size: 0.5rem;
+    letter-spacing: 0.2em;
+    color: var(--gold-dim);
+    font-weight: 300;
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .nav::before { display: block; }
+  }
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav a, .nav button {
+    font-family: var(--font-label);
+    color: var(--cream);
+    text-decoration: none;
+    font-size: 0.68rem;
+    padding: 0.55rem 0.7rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+    background: none;
+    border: none;
+    border-right: 1px solid #222;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 400;
+  }
+  .nav a:hover, .nav button:hover {
+    color: var(--gold-bright);
+    background: rgba(201,168,76,0.1);
+  }
+
+  .nav-divider {
+    width: 1px;
+    background: #333;
+    margin: 0;
+    align-self: stretch;
+  }
+
+  /* Live button */
+  .nav .live-btn {
+    color: var(--live-red);
+    border-right: none;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-left: 1px solid #333;
+  }
+  .nav .live-btn:hover {
+    background: rgba(196,64,64,0.15);
+    color: #e8c0c0;
+  }
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--live-red);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ===== CONTAINER ===== */
+  .container {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  /* ===== ART DECO SECTION DIVIDERS ===== */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2.5rem auto 2rem;
+    width: 100%;
+    max-width: 400px;
+    gap: 0;
+    height: 20px;
+  }
+  .section-divider .sd-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dark));
+  }
+  .section-divider .sd-line.right {
+    background: linear-gradient(90deg, var(--gold-dark), transparent);
+  }
+  .section-divider .sd-center {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 6px;
+  }
+  .section-divider .sd-bar {
+    width: 2px;
+    height: 14px;
+    background: var(--gold-dark);
+  }
+  .section-divider .sd-diamond {
+    width: 7px;
+    height: 7px;
+    border: 1px solid var(--gold);
+    transform: rotate(45deg);
+  }
+  .section-divider .sd-diamond-filled {
+    width: 5px;
+    height: 5px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+
+  /* ===== SECTIONS ===== */
+  .section {
+    margin-bottom: 2.5rem;
+  }
+
+  /* Train station sign header */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #151210 0%, #1a1714 50%, #151210 100%);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .section-header::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-dark));
+  }
+  .section-header .section-icon {
+    font-size: 1.1rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--gold-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 46px;
+    align-self: stretch;
+  }
+  .section-header .section-title-area {
+    flex: 1;
+    padding: 0.55rem 0.85rem;
+  }
+  .section-header h2 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+  .section-header .section-platform {
+    font-family: var(--font-label);
+    font-size: 0.52rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--gold-dim);
+    font-weight: 300;
+  }
+  /* Rivet dots on section header */
+  .section-header .rivet {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--border-light), var(--border));
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+  }
+  .section-header .rivet.r1 { bottom: 6px; right: 8px; }
+  .section-header .rivet.r2 { bottom: 6px; right: 20px; }
+
+  .section-summary {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    margin-bottom: 1.25rem;
+    font-style: italic;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--gold-dark);
+  }
+
+  /* ===== STORY CARDS ===== */
+  .story {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1.25rem 1.35rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    position: relative;
+  }
+  .story::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--gold-dark);
+    border-radius: 3px 0 0 3px;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .story:hover {
+    border-color: var(--gold-dark);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+  .story:hover::before { opacity: 1; }
+
+  /* Art deco corner on story cards */
+  .story::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 16px; height: 16px;
+    border-top: 1px solid var(--gold-dark);
+    border-right: 1px solid var(--gold-dark);
+    border-radius: 0 3px 0 0;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .story:hover::after { opacity: 0.5; }
+
+  .story-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+  .story h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    flex: 1;
+    color: var(--cream);
+  }
+
+  .sentiment {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.45rem;
+    border-radius: 2px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .sentiment-neutral   { background: rgba(168,152,128,0.15); color: var(--neutral); }
+  .sentiment-positive,
+  .sentiment-bullish    { background: rgba(122,184,122,0.12); color: var(--positive); }
+  .sentiment-negative,
+  .sentiment-bearish    { background: rgba(196,116,116,0.12); color: var(--negative); }
+  .sentiment-mixed      { background: rgba(201,168,76,0.12); color: var(--mixed); }
+
+  /* Podcast styling */
+  .section-podcast .story {
+    border-left: 2px solid var(--podcast-color);
+  }
+  .section-podcast .story::before { display: none; }
+  .section-podcast .section-header::before {
+    background: linear-gradient(90deg, var(--podcast-dim), var(--podcast-color), var(--podcast-dim));
+  }
+
+  .story .analysis {
+    color: var(--text);
+    font-size: 0.93rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.75;
+  }
+
+  .key-facts {
+    background: var(--surface-2);
+    border-radius: 2px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--border);
+  }
+  .key-facts-label {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+  }
+  .key-facts ul {
+    list-style: none;
+    padding: 0;
+  }
+  .key-facts li {
+    font-size: 0.85rem;
+    color: var(--text);
+    padding: 0.15rem 0;
+    padding-left: 1.1rem;
+    position: relative;
+  }
+  .key-facts li::before {
+    content: "\2014";
+    position: absolute;
+    left: 0;
+    color: var(--gold-dim);
+    font-weight: 600;
+  }
+
+  .sources {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+  }
+  .sources a {
+    font-family: var(--font-label);
+    font-size: 0.62rem;
+    color: var(--gold);
+    text-decoration: none;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--gold-dark);
+    border-radius: 2px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sources a:hover {
+    background: var(--gold-dark);
+    color: var(--cream);
+  }
+
+  /* ===== VERIFICATION BADGES ===== */
+  .verification-badge {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  .verification-confirmed  { background: rgba(122,184,122,0.12); color: var(--positive); border: 1px solid rgba(122,184,122,0.25); }
+  .verification-developing { background: rgba(201,168,76,0.12); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); }
+  .verification-disputed   { background: rgba(196,116,116,0.12); color: var(--negative); border: 1px solid rgba(196,116,116,0.25); }
+  .verification-analysis   { background: rgba(155,125,201,0.12); color: var(--podcast-color); border: 1px solid rgba(155,125,201,0.25); }
+
+  /* ===== BIAS SPECTRUM BAR ===== */
+  .bias-spectrum {
+    margin-top: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+  .bias-spectrum-label {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold-dim);
+    font-weight: 400;
+    margin-bottom: 0.4rem;
+  }
+  .bias-bar-container {
+    position: relative;
+    height: 14px;
+    background: linear-gradient(90deg,
+      rgba(100,140,200,0.15) 0%,
+      rgba(100,140,200,0.08) 25%,
+      rgba(168,152,128,0.08) 50%,
+      rgba(200,120,100,0.08) 75%,
+      rgba(200,120,100,0.15) 100%
+    );
+    border-radius: 7px;
+    margin-bottom: 0.3rem;
+    border: 1px solid var(--border);
+  }
+  .bias-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-label);
+    font-size: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    margin-bottom: 0.35rem;
+  }
+  .bias-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s;
+    border: 1.5px solid var(--cream);
+  }
+  .bias-dot:hover { transform: translate(-50%, -50%) scale(1.4); }
+  .bias-dot.lean-left       { background: #6490c4; left: 10%; }
+  .bias-dot.lean-center-left { background: #7dabc4; left: 30%; }
+  .bias-dot.lean-center     { background: #a89880; left: 50%; }
+  .bias-dot.lean-center-right { background: #c49a7d; left: 70%; }
+  .bias-dot.lean-right      { background: #c46464; left: 90%; }
+  .bias-framings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .bias-framing-item {
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .bias-framing-source {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+  .bias-framing-text {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  /* ===== COLLAPSIBLE EMPTY SECTIONS ===== */
+  .section-empty .section-header {
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.2s;
+  }
+  .section-empty .section-header:hover { opacity: 0.8; }
+  .section-empty-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    text-align: center;
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.88rem;
+  }
+  .section-empty.expanded .section-empty-body {
+    max-height: 60px;
+    padding: 0.75rem 0;
+  }
+  .section-empty .section-header .expand-hint {
+    font-family: var(--font-label);
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-left: auto;
+    padding-right: 0.5rem;
+    transition: color 0.2s;
+  }
+  .section-empty .section-header:hover .expand-hint { color: var(--gold-dim); }
+
+  /* ===== INQUIRY BUTTON ON STORY CARDS ===== */
+  .story-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.6rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .inquiry-btn {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    background: none;
+    border: 1px solid var(--gold-dark);
+    padding: 0.3rem 0.7rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .inquiry-btn:hover {
+    background: var(--gold-dark);
+    color: var(--cream);
+  }
+  .inquiry-btn .inquiry-icon {
+    font-size: 0.75rem;
+    font-style: normal;
+  }
+
+  /* ======================================================================= */
+  /* FILM NOIR ATMOSPHERE — Fog overlay at page bottom                       */
+  /* ======================================================================= */
+  .noir-fog {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    pointer-events: none;
+    z-index: 50;
+    background: linear-gradient(to top, rgba(26,21,16,0.6), transparent);
+    opacity: 0.5;
+  }
+
+  /* ======================================================================= */
+  /* LIVE EVENTS PANEL (The Wire Room)                                       */
+  /* ======================================================================= */
+  .live-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(10,8,5,0.7);
+    backdrop-filter: blur(4px);
+  }
+  .live-overlay.open { display: block; }
+
+  .live-panel {
+    position: fixed;
+    top: 0;
+    right: -520px;
+    width: 500px;
+    max-width: 92vw;
+    height: 100vh;
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    z-index: 1000;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .live-panel.open { right: 0; }
+
+  .live-panel-header {
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .live-panel-header h2 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--cream);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .live-panel-header .subtitle-label {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 400;
+  }
+  .live-panel-header .close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+  }
+  .live-panel-header .close-btn:hover { color: var(--cream); }
+
+  .live-panel-controls {
+    padding: 0.65rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .live-cat-btn {
+    font-family: var(--font-label);
+    font-size: 0.62rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .live-cat-btn:hover { border-color: var(--gold-dim); color: var(--cream); }
+  .live-cat-btn.active {
+    background: var(--gold-dark);
+    border-color: var(--gold);
+    color: var(--cream);
+  }
+
+  .live-status {
+    padding: 0.4rem 1.5rem;
+    font-family: var(--font-label);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .live-status .refresh-btn {
+    font-family: var(--font-label);
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--gold);
+    font-size: 0.62rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .live-status .refresh-btn:hover { background: var(--surface-2); }
+  .live-status .auto-refresh {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .live-feed {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 1rem;
+  }
+
+  .live-item {
+    padding: 0.7rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .live-item:hover { background: var(--surface); border-radius: 3px; }
+  .live-item:last-child { border-bottom: none; }
+
+  .live-item-source {
+    font-family: var(--font-label);
+    font-size: 0.58rem;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    margin-bottom: 0.15rem;
+  }
+  .live-item a {
+    font-family: var(--font-display);
+    color: var(--cream);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.3;
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+  .live-item a:hover { color: var(--gold); }
+  .live-item-summary {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .live-item-time {
+    font-family: var(--font-label);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .live-loading {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .live-spinner {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 0.75rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .live-error {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--negative);
+    font-size: 0.85rem;
+  }
+  .live-error .setup-hint {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+  .live-error code {
+    background: var(--surface-2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 2px;
+    font-size: 0.75rem;
+    color: var(--gold);
+  }
+
+  /* ===== INQUIRY DESK MODAL ===== */
+  .inquiry-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: rgba(10,8,5,0.8);
+    backdrop-filter: blur(6px);
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem;
+  }
+  .inquiry-overlay.open { display: flex; }
+
+  .inquiry-modal {
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  .inquiry-modal-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-shrink: 0;
+  }
+  .inquiry-modal-header h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 0.15rem;
+  }
+  .inquiry-modal-header .inquiry-label {
+    font-family: var(--font-label);
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+  }
+  .inquiry-modal-header .close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .inquiry-modal-header .close-btn:hover { color: var(--cream); }
+
+  .inquiry-story-context {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    flex-shrink: 0;
+  }
+  .inquiry-story-context h4 {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--cream);
+    line-height: 1.3;
+  }
+  .inquiry-story-context .context-meta {
+    font-family: var(--font-label);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.2rem;
+  }
+
+  .inquiry-suggestions {
+    padding: 0.6rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .suggestion-btn {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.25rem 0.55rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-style: italic;
+  }
+  .suggestion-btn:hover {
+    color: var(--gold);
+    border-color: var(--gold-dark);
+  }
+
+  .inquiry-conversation {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .inquiry-msg {
+    max-width: 95%;
+  }
+  .inquiry-msg.user {
+    align-self: flex-end;
+  }
+  .inquiry-msg.assistant {
+    align-self: flex-start;
+  }
+
+  .inquiry-msg .msg-label {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.2rem;
+  }
+  .inquiry-msg.user .msg-label { color: var(--text-dim); text-align: right; }
+  .inquiry-msg.assistant .msg-label { color: var(--gold-dim); }
+
+  .inquiry-msg .msg-body {
+    font-size: 0.88rem;
+    line-height: 1.7;
+    padding: 0.7rem 0.9rem;
+    border-radius: 3px;
+  }
+  .inquiry-msg.user .msg-body {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .inquiry-msg.assistant .msg-body {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--gold-dark);
+  }
+  .inquiry-msg .msg-body p { margin-bottom: 0.6rem; }
+  .inquiry-msg .msg-body p:last-child { margin-bottom: 0; }
+
+  .inquiry-typing {
+    align-self: flex-start;
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .inquiry-typing .typing-dots span {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    animation: typing-bounce 1.2s infinite;
+  }
+  .inquiry-typing .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .inquiry-typing .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  .inquiry-input-bar {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .inquiry-input-bar input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    outline: none;
+  }
+  .inquiry-input-bar input::placeholder { color: var(--text-dim); font-style: italic; }
+  .inquiry-input-bar input:focus { border-color: var(--gold-dark); }
+  .inquiry-input-bar button {
+    font-family: var(--font-label);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: var(--gold-dark);
+    color: var(--cream);
+    border: 1px solid var(--gold);
+    padding: 0.5rem 1rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .inquiry-input-bar button:hover { background: var(--gold-dim); }
+  .inquiry-input-bar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 600px) {
+    .inquiry-modal { max-height: 95vh; }
+    .inquiry-suggestions { display: none; }
+  }
+
+  /* ===== FOOTER — Film Noir Cityscape ===== */
+  .footer {
+    text-align: center;
+    padding: 0 0 2rem;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .footer-skyline {
+    display: block;
+    width: 100%;
+    max-height: 120px;
+    margin-bottom: 0.5rem;
+    opacity: 0.18;
+  }
+  .footer-content {
+    position: relative;
+    z-index: 1;
+    padding: 0 1.5rem;
+  }
+  .footer .footer-brand {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+  .footer a {
+    color: var(--gold);
+    text-decoration: none;
+  }
+  .footer .footer-motto {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--gold-dim);
+    font-size: 0.72rem;
+    margin-top: 0.35rem;
+  }
+  /* Train track decorative line */
+  .train-track {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 1rem auto 0.75rem;
+    width: 200px;
+    height: 10px;
+    position: relative;
+  }
+  .train-track .rail {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+  }
+  .train-track .tie {
+    width: 2px;
+    height: 8px;
+    background: var(--border);
+    flex-shrink: 0;
+    margin: 0 6px;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 600px) {
+    .header h1 { font-size: 2rem; }
+    .header-corner { display: none; }
+    .story { padding: 1rem; }
+    .nav a, .nav button { font-size: 0.6rem; padding: 0.4rem 0.45rem; }
+    .live-panel { width: 100vw; max-width: 100vw; }
+    .section-header .section-icon { min-width: 36px; padding: 0.5rem; font-size: 0.9rem; }
+  }
+
+  /* ===== PRINT ===== */
+  @media print {
+    body { background: #fff; color: #111; }
+    .nav, .live-panel, .live-overlay, .noir-fog, .clock-container { display: none !important; }
+    .story { border: 1px solid #ccc; }
+    .header { background: #fff; border-bottom: 2px solid #333; }
+    .header h1 { color: #111; }
+    .header-corner { display: none; }
+    .footer-skyline { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Film noir ambient fog -->
+<div class="noir-fog"></div>
+
+<!-- ===== MASTHEAD / HEADER ===== -->
+<div class="header">
+  <!-- Art deco corner ornaments -->
+  <div class="header-corner tl">
+    <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 2 L2 28 L5 28 L5 5 L28 5 L28 2 Z" fill="#c9a84c" opacity="0.5"/>
+      <path d="M2 2 L18 2 L18 3.5 L3.5 3.5 L3.5 18 L2 18 Z" fill="#c9a84c" opacity="0.3"/>
+      <rect x="8" y="8" width="4" height="4" transform="rotate(45 10 10)" fill="#c9a84c" opacity="0.4"/>
+    </svg>
+  </div>
+  <div class="header-corner tr">
+    <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 2 L2 28 L5 28 L5 5 L28 5 L28 2 Z" fill="#c9a84c" opacity="0.5"/>
+      <path d="M2 2 L18 2 L18 3.5 L3.5 3.5 L3.5 18 L2 18 Z" fill="#c9a84c" opacity="0.3"/>
+      <rect x="8" y="8" width="4" height="4" transform="rotate(45 10 10)" fill="#c9a84c" opacity="0.4"/>
+    </svg>
+  </div>
+  <div class="header-corner bl">
+    <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 2 L2 28 L5 28 L5 5 L28 5 L28 2 Z" fill="#c9a84c" opacity="0.5"/>
+      <path d="M2 2 L18 2 L18 3.5 L3.5 3.5 L3.5 18 L2 18 Z" fill="#c9a84c" opacity="0.3"/>
+      <rect x="8" y="8" width="4" height="4" transform="rotate(45 10 10)" fill="#c9a84c" opacity="0.4"/>
+    </svg>
+  </div>
+  <div class="header-corner br">
+    <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2 2 L2 28 L5 28 L5 5 L28 5 L28 2 Z" fill="#c9a84c" opacity="0.5"/>
+      <path d="M2 2 L18 2 L18 3.5 L3.5 3.5 L3.5 18 L2 18 Z" fill="#c9a84c" opacity="0.3"/>
+      <rect x="8" y="8" width="4" height="4" transform="rotate(45 10 10)" fill="#c9a84c" opacity="0.4"/>
+    </svg>
+  </div>
+
+  <!-- Newspaper masthead top rule -->
+  <div class="masthead-rule-top">
+    <div class="rule-line"></div>
+    <span class="rule-ornament">&#9830; &#9830; &#9830;</span>
+    <div class="rule-line"></div>
+  </div>
+
+  <div class="edition-label">Morning Edition &middot; Final</div>
+
+  <div class="header-inner">
+    <!-- Analog clock (left) -->
+    <div class="clock-container">
+      <svg class="clock-svg" viewBox="0 0 200 200" id="headerClock">
+        <!-- Clock face -->
+        <circle cx="100" cy="100" r="95" fill="#1a1510" stroke="#c9a84c" stroke-width="2"/>
+        <circle cx="100" cy="100" r="90" fill="none" stroke="#4a3f32" stroke-width="1"/>
+        <!-- Hour markers -->
+        <g stroke="#c9a84c" stroke-width="2">
+          <line x1="100" y1="15" x2="100" y2="28"/><!-- 12 -->
+          <line x1="143" y1="22" x2="138" y2="34"/><!-- 1 -->
+          <line x1="178" y1="57" x2="166" y2="62"/><!-- 2 -->
+          <line x1="185" y1="100" x2="172" y2="100"/><!-- 3 -->
+          <line x1="178" y1="143" x2="166" y2="138"/><!-- 4 -->
+          <line x1="143" y1="178" x2="138" y2="166"/><!-- 5 -->
+          <line x1="100" y1="185" x2="100" y2="172"/><!-- 6 -->
+          <line x1="57" y1="178" x2="62" y2="166"/><!-- 7 -->
+          <line x1="22" y1="143" x2="34" y2="138"/><!-- 8 -->
+          <line x1="15" y1="100" x2="28" y2="100"/><!-- 9 -->
+          <line x1="22" y1="57" x2="34" y2="62"/><!-- 10 -->
+          <line x1="57" y1="22" x2="62" y2="34"/><!-- 11 -->
+        </g>
+        <!-- Minute tick marks -->
+        <g stroke="#4a3f32" stroke-width="1" id="clockMinuteTicks"></g>
+        <!-- Hour numerals -->
+        <g font-family="'Oswald', sans-serif" font-size="14" fill="#8a7535" text-anchor="middle" dominant-baseline="central" font-weight="300">
+          <text x="100" y="38">12</text>
+          <text x="133" y="44">1</text>
+          <text x="158" y="68">2</text>
+          <text x="165" y="102">3</text>
+          <text x="158" y="136">4</text>
+          <text x="133" y="160">5</text>
+          <text x="100" y="166">6</text>
+          <text x="67" y="160">7</text>
+          <text x="42" y="136">8</text>
+          <text x="35" y="102">9</text>
+          <text x="42" y="68">10</text>
+          <text x="67" y="44">11</text>
+        </g>
+        <!-- Clock hands (positioned by JS) -->
+        <line id="clockHourHand" x1="100" y1="100" x2="100" y2="55" stroke="#c9a84c" stroke-width="3.5" stroke-linecap="round"/>
+        <line id="clockMinuteHand" x1="100" y1="100" x2="100" y2="35" stroke="#e8dcc8" stroke-width="2" stroke-linecap="round"/>
+        <line id="clockSecondHand" x1="100" y1="100" x2="100" y2="30" stroke="#c44040" stroke-width="0.8" stroke-linecap="round"/>
+        <!-- Center cap -->
+        <circle cx="100" cy="100" r="4" fill="#c9a84c"/>
+        <circle cx="100" cy="100" r="2" fill="#1a1510"/>
+      </svg>
+    </div>
+
+    <!-- Title block (center) -->
+    <div class="header-center">
+      <div class="tagline">Est. MMXXVI &middot; All Stations</div>
+      <h1>The Morning Train</h1>
+      <div class="subtitle">Fact-First News &amp; Centrist Analysis</div>
+    </div>
+
+    <!-- Analog clock (right — mirror) -->
+    <div class="clock-container">
+      <svg class="clock-svg" viewBox="0 0 200 200" id="headerClockRight">
+        <circle cx="100" cy="100" r="95" fill="#1a1510" stroke="#c9a84c" stroke-width="2"/>
+        <circle cx="100" cy="100" r="90" fill="none" stroke="#4a3f32" stroke-width="1"/>
+        <g stroke="#c9a84c" stroke-width="2">
+          <line x1="100" y1="15" x2="100" y2="28"/>
+          <line x1="143" y1="22" x2="138" y2="34"/>
+          <line x1="178" y1="57" x2="166" y2="62"/>
+          <line x1="185" y1="100" x2="172" y2="100"/>
+          <line x1="178" y1="143" x2="166" y2="138"/>
+          <line x1="143" y1="178" x2="138" y2="166"/>
+          <line x1="100" y1="185" x2="100" y2="172"/>
+          <line x1="57" y1="178" x2="62" y2="166"/>
+          <line x1="22" y1="143" x2="34" y2="138"/>
+          <line x1="15" y1="100" x2="28" y2="100"/>
+          <line x1="22" y1="57" x2="34" y2="62"/>
+          <line x1="57" y1="22" x2="62" y2="34"/>
+        </g>
+        <g font-family="'Oswald', sans-serif" font-size="14" fill="#8a7535" text-anchor="middle" dominant-baseline="central" font-weight="300">
+          <text x="100" y="38">12</text>
+          <text x="133" y="44">1</text>
+          <text x="158" y="68">2</text>
+          <text x="165" y="102">3</text>
+          <text x="158" y="136">4</text>
+          <text x="133" y="160">5</text>
+          <text x="100" y="166">6</text>
+          <text x="67" y="160">7</text>
+          <text x="42" y="136">8</text>
+          <text x="35" y="102">9</text>
+          <text x="42" y="68">10</text>
+          <text x="67" y="44">11</text>
+        </g>
+        <line id="clockHourHandR" x1="100" y1="100" x2="100" y2="55" stroke="#c9a84c" stroke-width="3.5" stroke-linecap="round"/>
+        <line id="clockMinuteHandR" x1="100" y1="100" x2="100" y2="35" stroke="#e8dcc8" stroke-width="2" stroke-linecap="round"/>
+        <line id="clockSecondHandR" x1="100" y1="100" x2="100" y2="30" stroke="#c44040" stroke-width="0.8" stroke-linecap="round"/>
+        <circle cx="100" cy="100" r="4" fill="#c9a84c"/>
+        <circle cx="100" cy="100" r="2" fill="#1a1510"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Art deco decorative line -->
+  <div class="deco-line">
+    <div class="dl-wing"></div>
+    <div class="dl-circle"></div>
+    <div class="dl-diamond"></div>
+    <div class="dl-circle"></div>
+    <div class="dl-wing right"></div>
+  </div>
+
+  <div class="date">{{ generated_at }}</div>
+
+  <!-- Masthead bottom rule -->
+  <div class="masthead-rule-bottom">
+    <div class="rule-thin"></div>
+    <div class="rule-thick"></div>
+    <div class="rule-dot"></div>
+    <div class="rule-thick"></div>
+    <div class="rule-thin"></div>
+  </div>
+</div>
+
+<!-- ===== NAV (Train Station Departure Board) ===== -->
+<nav class="nav">
+  {% for cat in categories %}
+  <a href="#{{ cat.name | lower | replace(' ', '-') | replace('&', '') | replace('  ', '-') }}">{{ cat.emoji | safe }} {{ cat.name }}</a>
+  {% endfor %}
+  <span class="nav-divider"></span>
+  <a href="archive/index.html" style="color:var(--text-dim)">Archive</a>
+  <span class="nav-divider"></span>
+  <button class="live-btn" onclick="openLivePanel()">
+    <span class="live-dot"></span> WIRE ROOM
+  </button>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+{% for cat in categories %}
+{% if not loop.first %}
+<!-- Art deco section divider -->
+<div class="section-divider">
+  <div class="sd-line"></div>
+  <div class="sd-center">
+    <div class="sd-bar"></div>
+    <div class="sd-diamond"></div>
+    <div class="sd-diamond-filled"></div>
+    <div class="sd-diamond"></div>
+    <div class="sd-bar"></div>
+  </div>
+  <div class="sd-line right"></div>
+</div>
+{% endif %}
+
+{% if cat.stories %}
+<section class="section {% if 'Podcast' in cat.name %}section-podcast{% endif %}" id="{{ cat.name | lower | replace(' ', '-') | replace('&', '') | replace('  ', '-') }}">
+  <!-- Train station sign section header -->
+  <div class="section-header">
+    <span class="section-icon">{{ cat.emoji | safe }}</span>
+    <div class="section-title-area">
+      <div class="section-platform">Platform {{ loop.index }}</div>
+      <h2>{{ cat.name }}</h2>
+    </div>
+    <span class="rivet r1"></span>
+    <span class="rivet r2"></span>
+  </div>
+
+  {% if cat.summary %}
+  <div class="section-summary">{{ cat.summary }}</div>
+  {% endif %}
+
+  {% for story in cat.stories %}
+  <article class="story">
+    <div class="story-header">
+      <h3>{{ story.headline }}</h3>
+      <div style="display:flex; gap:0.3rem; align-items:center; flex-shrink:0;">
+        {% if story.verification %}
+        <span class="verification-badge verification-{{ story.verification }}">
+          {% if story.verification == 'confirmed' %}&#10003;{% elif story.verification == 'developing' %}&#9679;{% elif story.verification == 'disputed' %}&#9888;{% else %}&#9998;{% endif %}
+          {{ story.verification }}
+        </span>
+        {% endif %}
+        {% if story.sentiment %}
+        <span class="sentiment sentiment-{{ story.sentiment }}">{{ story.sentiment }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="analysis">{{ story.analysis }}</div>
+
+    {% if story.key_facts %}
+    <div class="key-facts">
+      <div class="key-facts-label">Key Facts</div>
+      <ul>
+        {% for fact in story.key_facts %}
+        <li>{{ fact }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if story.bias_spectrum and story.bias_spectrum | length > 0 %}
+    <div class="bias-spectrum">
+      <div class="bias-spectrum-label">Bias Spectrum — How Sources Frame This Story</div>
+      <div class="bias-bar-labels">
+        <span>Left</span>
+        <span>Center-Left</span>
+        <span>Center</span>
+        <span>Center-Right</span>
+        <span>Right</span>
+      </div>
+      <div class="bias-bar-container">
+        {% for bs in story.bias_spectrum %}
+        <div class="bias-dot lean-{{ bs.lean }}" title="{{ bs.source }}: {{ bs.framing }}"></div>
+        {% endfor %}
+      </div>
+      <div class="bias-framings">
+        {% for bs in story.bias_spectrum %}
+        <div class="bias-framing-item">
+          <span class="bias-framing-source">{{ bs.source }}</span>
+          <span class="bias-framing-text">{{ bs.framing }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if story.sources %}
+    <div class="sources">
+      {% for src in story.sources %}
+      <a href="{{ src.url }}" target="_blank" rel="noopener">{{ src.name }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="story-actions">
+      <button class="inquiry-btn" onclick="openInquiry(this)" data-headline="{{ story.headline }}" data-analysis="{{ story.analysis }}" data-facts="{{ story.key_facts | join('|||') if story.key_facts else '' }}" data-sources="{{ story.sources | tojson if story.sources else '[]' }}">
+        <i class="inquiry-icon">&#9998;</i> Investigate
+      </button>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% else %}
+<!-- Collapsed empty section -->
+<section class="section section-empty" id="{{ cat.name | lower | replace(' ', '-') | replace('&', '') | replace('  ', '-') }}">
+  <div class="section-header" onclick="this.parentElement.classList.toggle('expanded')">
+    <span class="section-icon">{{ cat.emoji | safe }}</span>
+    <div class="section-title-area">
+      <div class="section-platform">Platform {{ loop.index }}</div>
+      <h2>{{ cat.name }}</h2>
+    </div>
+    <span class="expand-hint">No dispatches today &middot; click to expand</span>
+    <span class="rivet r1"></span>
+    <span class="rivet r2"></span>
+  </div>
+  <div class="section-empty-body">
+    No major dispatches filed for this category today.
+  </div>
+</section>
+{% endif %}
+{% endfor %}
+
+</div>
+
+<!-- ===== LIVE EVENTS PANEL (The Wire Room) ===== -->
+
+<div class="live-overlay" id="liveOverlay" onclick="closeLivePanel()"></div>
+
+<div class="live-panel" id="livePanel">
+  <div class="live-panel-header">
+    <div>
+      <h2><span class="live-dot"></span> The Wire Room</h2>
+      <div class="subtitle-label">Live dispatches from the wire services</div>
+    </div>
+    <button class="close-btn" onclick="closeLivePanel()">&times;</button>
+  </div>
+
+  <div class="live-panel-controls" id="liveCategoryBar">
+    <button class="live-cat-btn active" data-cat="all">All Wires</button>
+    <button class="live-cat-btn" data-cat="breaking">Breaking</button>
+    <button class="live-cat-btn" data-cat="politics">Politics</button>
+    <button class="live-cat-btn" data-cat="world">World</button>
+    <button class="live-cat-btn" data-cat="finance">Markets</button>
+    <button class="live-cat-btn" data-cat="tech">Technology</button>
+    <button class="live-cat-btn" data-cat="reddit">Forum</button>
+  </div>
+
+  <div class="live-status">
+    <div class="auto-refresh">
+      <input type="checkbox" id="autoRefreshToggle" checked>
+      <label for="autoRefreshToggle" style="cursor:pointer">Auto-refresh 2 min</label>
+    </div>
+    <span id="liveTimestamp"></span>
+    <button class="refresh-btn" onclick="fetchLive()">Refresh Wire</button>
+  </div>
+
+  <div class="live-feed" id="liveFeed">
+    <div class="live-loading" id="liveLoading">
+      <div class="live-spinner"></div>
+      Select a wire or press Refresh to receive dispatches
+    </div>
+  </div>
+</div>
+
+<!-- ===== INQUIRY DESK MODAL ===== -->
+<div class="inquiry-overlay" id="inquiryOverlay" onclick="if(event.target===this)closeInquiry()">
+  <div class="inquiry-modal">
+    <div class="inquiry-modal-header">
+      <div>
+        <div class="inquiry-label">The Inquiry Desk</div>
+        <h3 id="inquiryTitle">Investigate This Story</h3>
+      </div>
+      <button class="close-btn" onclick="closeInquiry()">&times;</button>
+    </div>
+
+    <div class="inquiry-story-context" id="inquiryContext">
+      <h4 id="inquiryHeadline"></h4>
+      <div class="context-meta" id="inquiryMeta"></div>
+    </div>
+
+    <div class="inquiry-suggestions" id="inquirySuggestions">
+      <button class="suggestion-btn" onclick="askSuggestion(this)">What's the full story here?</button>
+      <button class="suggestion-btn" onclick="askSuggestion(this)">What are both sides not saying?</button>
+      <button class="suggestion-btn" onclick="askSuggestion(this)">How does the left vs. right see this?</button>
+      <button class="suggestion-btn" onclick="askSuggestion(this)">What's the historical context?</button>
+      <button class="suggestion-btn" onclick="askSuggestion(this)">Is this claim actually verified?</button>
+    </div>
+
+    <div class="inquiry-conversation" id="inquiryConversation"></div>
+
+    <div class="inquiry-input-bar">
+      <input type="text" id="inquiryInput" placeholder="Ask anything about this story..." onkeydown="if(event.key==='Enter')submitInquiry()">
+      <button id="inquirySubmitBtn" onclick="submitInquiry()">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FOOTER with Film Noir Cityscape ===== -->
+<footer class="footer">
+  <!-- Film noir city skyline silhouette -->
+  <svg class="footer-skyline" viewBox="0 0 1200 160" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2e2820" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#2e2820" stop-opacity="1"/>
+      </linearGradient>
+      <linearGradient id="buildGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#252019"/>
+        <stop offset="100%" stop-color="#1a1510"/>
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="160" fill="url(#skyGrad)"/>
+    <!-- Distant buildings -->
+    <g fill="#1e1914" opacity="0.5">
+      <rect x="20" y="80" width="40" height="80"/>
+      <rect x="70" y="60" width="30" height="100"/>
+      <rect x="120" y="90" width="50" height="70"/>
+      <rect x="200" y="50" width="35" height="110"/>
+      <rect x="250" y="75" width="45" height="85"/>
+      <rect x="320" y="65" width="28" height="95"/>
+      <rect x="380" y="85" width="55" height="75"/>
+      <rect x="460" y="45" width="30" height="115"/>
+      <rect x="510" y="70" width="40" height="90"/>
+      <rect x="580" y="55" width="35" height="105"/>
+      <rect x="640" y="80" width="50" height="80"/>
+      <rect x="720" y="60" width="30" height="100"/>
+      <rect x="770" y="40" width="25" height="120"/>
+      <rect x="830" y="75" width="45" height="85"/>
+      <rect x="900" y="55" width="35" height="105"/>
+      <rect x="960" y="70" width="50" height="90"/>
+      <rect x="1030" y="50" width="30" height="110"/>
+      <rect x="1080" y="80" width="45" height="80"/>
+      <rect x="1140" y="65" width="40" height="95"/>
+    </g>
+    <!-- Foreground buildings -->
+    <g fill="url(#buildGrad)">
+      <rect x="0" y="100" width="60" height="60"/>
+      <rect x="55" y="85" width="45" height="75"/>
+      <rect x="95" y="110" width="35" height="50"/>
+      <rect x="140" y="90" width="50" height="70"/>
+      <rect x="185" y="105" width="30" height="55"/>
+      <rect x="230" y="75" width="55" height="85"/>
+      <rect x="280" y="95" width="40" height="65"/>
+      <rect x="315" y="85" width="30" height="75"/>
+      <rect x="355" y="100" width="60" height="60"/>
+      <rect x="410" y="80" width="35" height="80"/>
+      <rect x="450" y="95" width="45" height="65"/>
+      <rect x="490" y="110" width="30" height="50"/>
+      <rect x="530" y="85" width="55" height="75"/>
+      <rect x="580" y="100" width="40" height="60"/>
+      <rect x="620" y="90" width="35" height="70"/>
+      <rect x="660" y="105" width="50" height="55"/>
+      <rect x="705" y="80" width="30" height="80"/>
+      <rect x="740" y="95" width="55" height="65"/>
+      <rect x="790" y="75" width="35" height="85"/>
+      <rect x="830" y="100" width="45" height="60"/>
+      <rect x="870" y="90" width="30" height="70"/>
+      <rect x="910" y="85" width="55" height="75"/>
+      <rect x="960" y="100" width="40" height="60"/>
+      <rect x="1000" y="80" width="35" height="80"/>
+      <rect x="1040" y="95" width="50" height="65"/>
+      <rect x="1085" y="105" width="30" height="55"/>
+      <rect x="1120" y="90" width="45" height="70"/>
+      <rect x="1160" y="100" width="40" height="60"/>
+    </g>
+    <!-- Window lights (scattered warm dots) -->
+    <g fill="#c9a84c" opacity="0.3">
+      <rect x="30" y="108" width="3" height="4"/>
+      <rect x="40" y="115" width="3" height="4"/>
+      <rect x="75" y="92" width="3" height="4"/>
+      <rect x="80" y="100" width="3" height="4"/>
+      <rect x="155" y="98" width="3" height="4"/>
+      <rect x="162" y="106" width="3" height="4"/>
+      <rect x="245" y="82" width="3" height="4"/>
+      <rect x="255" y="95" width="3" height="4"/>
+      <rect x="260" y="105" width="3" height="4"/>
+      <rect x="370" y="108" width="3" height="4"/>
+      <rect x="380" y="115" width="3" height="4"/>
+      <rect x="425" y="88" width="3" height="4"/>
+      <rect x="465" y="102" width="3" height="4"/>
+      <rect x="545" y="92" width="3" height="4"/>
+      <rect x="555" y="100" width="3" height="4"/>
+      <rect x="635" y="98" width="3" height="4"/>
+      <rect x="715" y="88" width="3" height="4"/>
+      <rect x="755" y="102" width="3" height="4"/>
+      <rect x="800" y="82" width="3" height="4"/>
+      <rect x="810" y="92" width="3" height="4"/>
+      <rect x="925" y="93" width="3" height="4"/>
+      <rect x="935" y="100" width="3" height="4"/>
+      <rect x="1010" y="88" width="3" height="4"/>
+      <rect x="1055" y="102" width="3" height="4"/>
+      <rect x="1135" y="98" width="3" height="4"/>
+    </g>
+    <!-- Lamp post silhouettes -->
+    <g fill="#1a1510">
+      <rect x="170" y="115" width="3" height="45"/>
+      <ellipse cx="171" cy="113" rx="6" ry="4"/>
+      <rect x="500" y="120" width="3" height="40"/>
+      <ellipse cx="501" cy="118" rx="6" ry="4"/>
+      <rect x="850" y="115" width="3" height="45"/>
+      <ellipse cx="851" cy="113" rx="6" ry="4"/>
+    </g>
+    <!-- Lamp glow -->
+    <g fill="#c9a84c" opacity="0.15">
+      <circle cx="171" cy="113" r="12"/>
+      <circle cx="501" cy="118" r="12"/>
+      <circle cx="851" cy="113" r="12"/>
+    </g>
+  </svg>
+
+  <div class="footer-content">
+    <!-- Train track decoration -->
+    <div class="train-track">
+      <div class="rail"></div>
+      <div class="tie"></div>
+      <div class="rail"></div>
+      <div class="tie"></div>
+      <div class="rail"></div>
+      <div class="tie"></div>
+      <div class="rail"></div>
+      <div class="tie"></div>
+      <div class="rail"></div>
+      <div class="tie"></div>
+      <div class="rail"></div>
+    </div>
+
+    <div class="footer-brand">The Morning Train</div>
+    <p>Generated {{ generated_at }}</p>
+    <p style="margin-top:0.25rem">Sources drawn from AP, Reuters, BBC, NPR, WSJ, National Review, and other outlets across the spectrum. Analysis by Claude.</p>
+    <p class="footer-motto">&ldquo;All the facts. Every platform. One train.&rdquo;</p>
+    <p style="margin-top:0.35rem">&copy; {{ year }} The Morning Train</p>
+  </div>
+</footer>
+
+<!-- ===== CLOCK JAVASCRIPT ===== -->
+<script>
+(function() {
+  function setClockHands(hourId, minuteId, secondId) {
+    const now = new Date();
+    const h = now.getHours() % 12;
+    const m = now.getMinutes();
+    const s = now.getSeconds();
+
+    const hourAngle = (h * 30) + (m * 0.5);
+    const minuteAngle = m * 6;
+    const secondAngle = s * 6;
+
+    function setHand(id, angle, length) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const rad = (angle - 90) * Math.PI / 180;
+      const cx = 100, cy = 100;
+      el.setAttribute('x2', cx + length * Math.cos(rad));
+      el.setAttribute('y2', cy + length * Math.sin(rad));
+    }
+
+    setHand(hourId, hourAngle, 42);
+    setHand(minuteId, minuteAngle, 60);
+    setHand(secondId, secondAngle, 68);
+  }
+
+  function tick() {
+    setClockHands('clockHourHand', 'clockMinuteHand', 'clockSecondHand');
+    setClockHands('clockHourHandR', 'clockMinuteHandR', 'clockSecondHandR');
+  }
+
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+
+<!-- ===== LIVE EVENTS JAVASCRIPT ===== -->
+<script>
+(function() {
+  const WORKER_URL = window.LIVE_WORKER_URL || localStorage.getItem("digest_worker_url") || "";
+
+  let currentCategory = "all";
+  let autoRefreshInterval = null;
+  let isOpen = false;
+
+  window.openLivePanel = function() {
+    document.getElementById("livePanel").classList.add("open");
+    document.getElementById("liveOverlay").classList.add("open");
+    isOpen = true;
+    fetchLive();
+    startAutoRefresh();
+  };
+
+  window.closeLivePanel = function() {
+    document.getElementById("livePanel").classList.remove("open");
+    document.getElementById("liveOverlay").classList.remove("open");
+    isOpen = false;
+    stopAutoRefresh();
+  };
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && isOpen) closeLivePanel();
+  });
+
+  document.getElementById("liveCategoryBar").addEventListener("click", function(e) {
+    const btn = e.target.closest(".live-cat-btn");
+    if (!btn) return;
+    document.querySelectorAll(".live-cat-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentCategory = btn.dataset.cat;
+    fetchLive();
+  });
+
+  document.getElementById("autoRefreshToggle").addEventListener("change", function(e) {
+    if (e.target.checked) startAutoRefresh();
+    else stopAutoRefresh();
+  });
+
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    if (document.getElementById("autoRefreshToggle").checked) {
+      autoRefreshInterval = setInterval(function() {
+        if (isOpen) fetchLive();
+      }, 120000);
+    }
+  }
+
+  function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+      autoRefreshInterval = null;
+    }
+  }
+
+  window.fetchLive = async function() {
+    const feed = document.getElementById("liveFeed");
+    const ts = document.getElementById("liveTimestamp");
+
+    if (!WORKER_URL) {
+      feed.innerHTML = `
+        <div class="live-error">
+          <p>The wire is not yet connected.</p>
+          <div class="setup-hint">
+            <p>Deploy the Cloudflare Worker from <code>worker/</code>, then configure:</p>
+            <p style="margin-top:0.5rem"><code>localStorage.setItem("digest_worker_url", "https://your-worker.workers.dev")</code></p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    feed.innerHTML = '<div class="live-loading"><div class="live-spinner"></div>Receiving dispatches...</div>';
+
+    try {
+      const url = `${WORKER_URL}?category=${encodeURIComponent(currentCategory)}&limit=30`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      if (!data.items || data.items.length === 0) {
+        feed.innerHTML = '<div class="live-loading">No dispatches at present. Try another wire.</div>';
+        return;
+      }
+
+      feed.innerHTML = data.items.map(item => `
+        <div class="live-item">
+          <div class="live-item-source">${escapeHTML(item.source)}</div>
+          <a href="${escapeHTML(item.link)}" target="_blank" rel="noopener">${escapeHTML(item.title)}</a>
+          ${item.summary ? `<div class="live-item-summary">${escapeHTML(item.summary)}</div>` : ""}
+          ${item.published ? `<div class="live-item-time">${timeAgo(item.published)}</div>` : ""}
+        </div>
+      `).join("");
+
+      ts.textContent = `${new Date().toLocaleTimeString()}`;
+
+    } catch (err) {
+      feed.innerHTML = `
+        <div class="live-error">
+          <p>Wire connection failed</p>
+          <div class="setup-hint">${escapeHTML(err.message)}</div>
+        </div>`;
+    }
+  };
+
+  function escapeHTML(str) {
+    const div = document.createElement("div");
+    div.textContent = str || "";
+    return div.innerHTML;
+  }
+
+  function timeAgo(dateStr) {
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (diff < 60) return "just now";
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return `${Math.floor(diff / 86400)}d ago`;
+    } catch (e) {
+      return dateStr;
+    }
+  }
+})();
+
+// ===== INQUIRY DESK =====
+(function() {
+  const WORKER_URL = window.LIVE_WORKER_URL || localStorage.getItem("digest_worker_url") || "";
+
+  let currentStory = {};
+  let conversationHistory = [];
+  let isQuerying = false;
+
+  window.openInquiry = function(btn) {
+    const headline = btn.dataset.headline || "";
+    const analysis = btn.dataset.analysis || "";
+    const factsStr = btn.dataset.facts || "";
+    let sources = [];
+    try { sources = JSON.parse(btn.dataset.sources || "[]"); } catch(e) {}
+
+    currentStory = { headline, analysis, key_facts: factsStr ? factsStr.split("|||") : [], sources };
+    conversationHistory = [];
+
+    document.getElementById("inquiryHeadline").textContent = headline;
+
+    const sourceNames = sources.map(s => s.name || s).join(", ");
+    document.getElementById("inquiryMeta").textContent = sourceNames ? `Sources: ${sourceNames}` : "";
+
+    document.getElementById("inquiryConversation").innerHTML = "";
+    document.getElementById("inquiryInput").value = "";
+    document.getElementById("inquiryOverlay").classList.add("open");
+
+    setTimeout(() => document.getElementById("inquiryInput").focus(), 200);
+  };
+
+  window.closeInquiry = function() {
+    document.getElementById("inquiryOverlay").classList.remove("open");
+    currentStory = {};
+    conversationHistory = [];
+  };
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && document.getElementById("inquiryOverlay").classList.contains("open")) {
+      closeInquiry();
+    }
+  });
+
+  window.askSuggestion = function(btn) {
+    document.getElementById("inquiryInput").value = btn.textContent;
+    submitInquiry();
+  };
+
+  window.submitInquiry = async function() {
+    if (isQuerying) return;
+
+    const input = document.getElementById("inquiryInput");
+    const question = input.value.trim();
+    if (!question) return;
+
+    input.value = "";
+    isQuerying = true;
+    document.getElementById("inquirySubmitBtn").disabled = true;
+
+    // Hide suggestions after first question
+    const suggestions = document.getElementById("inquirySuggestions");
+    if (suggestions) suggestions.style.display = "none";
+
+    const conv = document.getElementById("inquiryConversation");
+
+    // Add user message
+    conv.innerHTML += `
+      <div class="inquiry-msg user">
+        <div class="msg-label">You</div>
+        <div class="msg-body">${escapeHTML(question)}</div>
+      </div>`;
+
+    // Add typing indicator
+    const typingId = "typing-" + Date.now();
+    conv.innerHTML += `
+      <div class="inquiry-typing" id="${typingId}">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        Investigating...
+      </div>`;
+    conv.scrollTop = conv.scrollHeight;
+
+    if (!WORKER_URL) {
+      removeEl(typingId);
+      conv.innerHTML += `
+        <div class="inquiry-msg assistant">
+          <div class="msg-label">Inquiry Desk</div>
+          <div class="msg-body"><p>The wire is not yet connected. Deploy the Cloudflare Worker and add your ANTHROPIC_API_KEY as a secret, then configure the worker URL.</p></div>
+        </div>`;
+      isQuerying = false;
+      document.getElementById("inquirySubmitBtn").disabled = false;
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${WORKER_URL}/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          headline: currentStory.headline,
+          analysis: currentStory.analysis,
+          key_facts: currentStory.key_facts,
+          sources: currentStory.sources,
+          question,
+          conversation: conversationHistory,
+        }),
+      });
+
+      const data = await resp.json();
+      removeEl(typingId);
+
+      if (data.error) {
+        conv.innerHTML += `
+          <div class="inquiry-msg assistant">
+            <div class="msg-label">Inquiry Desk</div>
+            <div class="msg-body"><p style="color:var(--negative)">${escapeHTML(data.error)}</p></div>
+          </div>`;
+      } else {
+        // Store conversation history for follow-ups
+        conversationHistory.push({ role: "user", content: conversationHistory.length === 0
+          ? `Here is a story from today's Morning Train digest:\n\nSTORY HEADLINE: ${currentStory.headline}\nDIGEST ANALYSIS:\n${currentStory.analysis}\n${currentStory.key_facts.length ? "\nKEY FACTS:\n" + currentStory.key_facts.map(f => "- " + f).join("\n") : ""}\n\nMy question: ${question}`
+          : question
+        });
+        conversationHistory.push({ role: "assistant", content: data.reply });
+
+        // Render reply with paragraph support
+        const formatted = data.reply
+          .split("\n\n")
+          .map(p => `<p>${escapeHTML(p.trim())}</p>`)
+          .join("");
+
+        conv.innerHTML += `
+          <div class="inquiry-msg assistant">
+            <div class="msg-label">Inquiry Desk</div>
+            <div class="msg-body">${formatted}</div>
+          </div>`;
+      }
+
+    } catch (err) {
+      removeEl(typingId);
+      conv.innerHTML += `
+        <div class="inquiry-msg assistant">
+          <div class="msg-label">Inquiry Desk</div>
+          <div class="msg-body"><p style="color:var(--negative)">Connection failed: ${escapeHTML(err.message)}</p></div>
+        </div>`;
+    }
+
+    conv.scrollTop = conv.scrollHeight;
+    isQuerying = false;
+    document.getElementById("inquirySubmitBtn").disabled = false;
+    document.getElementById("inquiryInput").focus();
+  };
+
+  function removeEl(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement("div");
+    div.textContent = str || "";
+    return div.innerHTML;
+  }
+})();
+</script>
+
+</body>
+</html>

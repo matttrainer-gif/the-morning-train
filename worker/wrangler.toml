@@ -1,0 +1,18 @@
+name = "morning-train"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Free tier is fine — 100K requests/day
+# Deploy with: npx wrangler deploy
+#
+# For the Inquiry Desk (POST /query), add your Anthropic API key as a secret:
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#
+# For Personalization, create a KV namespace:
+#   npx wrangler kv namespace create PREFS
+# Then paste the ID below:
+
+# Uncomment after creating the KV namespace and filling in the ID:
+# [[kv_namespaces]]
+# binding = "PREFS"
+# id = "YOUR_KV_NAMESPACE_ID_HERE"
