@@ -330,6 +330,21 @@
     font-size: 0.75rem;
     letter-spacing: 1px;
   }
+  .kl-card-badge {
+    position: absolute;
+    top: 4px;
+    font-size: 0.7rem;
+    line-height: 1;
+    opacity: 0.85;
+  }
+  .kl-badge-liked {
+    right: 4px;
+    color: var(--kl-red);
+  }
+  .kl-badge-rewatch {
+    right: 20px;
+    color: var(--gold);
+  }
   .kl-card-avail {
     font-family: var(--font-label);
     font-size: 0.48rem;
@@ -805,10 +820,10 @@
 <!-- FILTERS -->
 <div class="kl-filter-bar">
   <div class="kl-avail-tabs" id="availTabs">
-    <button class="kl-avail-tab active" data-avail="all">All</button>
-    <button class="kl-avail-tab" data-avail="streaming">Streaming</button>
-    <button class="kl-avail-tab" data-avail="in_theaters">In Theaters</button>
-    <button class="kl-avail-tab" data-avail="classic">Classics</button>
+    <button class="kl-avail-tab active" data-avail="all">All Films</button>
+    <button class="kl-avail-tab" data-avail="top">Top Rated</button>
+    <button class="kl-avail-tab" data-avail="liked">Liked</button>
+    <button class="kl-avail-tab" data-avail="rewatched">Rewatched</button>
   </div>
   <select id="yearFilter">
     <option value="all">All Years</option>
@@ -817,6 +832,24 @@
     <option value="2024">2024</option>
     <option value="2023">2023</option>
     <option value="older">Older</option>
+  </select>
+  <select id="genreFilter">
+    <option value="all">All Genres</option>
+    <option value="Action">Action</option>
+    <option value="Adventure">Adventure</option>
+    <option value="Animation">Animation</option>
+    <option value="Comedy">Comedy</option>
+    <option value="Crime">Crime</option>
+    <option value="Documentary">Documentary</option>
+    <option value="Drama">Drama</option>
+    <option value="Fantasy">Fantasy</option>
+    <option value="Horror">Horror</option>
+    <option value="Mystery">Mystery</option>
+    <option value="Romance">Romance</option>
+    <option value="Science Fiction">Science Fiction</option>
+    <option value="Thriller">Thriller</option>
+    <option value="War">War</option>
+    <option value="Western">Western</option>
   </select>
   <select id="ratingFilter">
     <option value="0">All Ratings</option>
@@ -926,7 +959,7 @@
   let chatQuerying = false;
 
   // Filters
-  let filters = { avail: "all", year: "all", rating: 0, sort: "rating", search: "", moods: new Set() };
+  let filters = { avail: "all", year: "all", genre: "all", rating: 0, sort: "rating", search: "", moods: new Set() };
 
   // ---- INIT ----
   async function init() {
@@ -979,11 +1012,14 @@
   // ---- FILTER + SORT ----
   function getFiltered() {
     let list = catalog.filter(function(m) {
-      if (filters.avail !== "all" && m.availability !== filters.avail) return false;
+      if (filters.avail === "top" && (m.kit_rating || 0) < 4) return false;
+      if (filters.avail === "liked" && !m.kit_liked) return false;
+      if (filters.avail === "rewatched" && !m.kit_rewatch) return false;
       if (filters.year !== "all") {
         if (filters.year === "older") { if (m.year >= 2023 || m.year === 0) return false; }
         else { if (m.year !== parseInt(filters.year)) return false; }
       }
+      if (filters.genre !== "all" && m.genre !== filters.genre) return false;
       if (m.kit_rating < filters.rating) return false;
       if (filters.search) {
         var q = filters.search.toLowerCase();
@@ -1018,18 +1054,19 @@
         ? '<img class="kl-card-poster" src="' + esc(m.poster_url) + '" alt="' + esc(m.title) + '" loading="lazy" onerror="this.outerHTML=\'<div class=kl-card-poster-placeholder>\\ud83c\\udfac</div>\'">'
         : '<div class="kl-card-poster-placeholder">&#127916;</div>';
 
-      var availClass = m.availability ? " kl-card-avail-" + m.availability : "";
-      var availLabel = { streaming: "Streaming", in_theaters: "In Theaters", classic: "Classic", coming_soon: "Coming Soon" }[m.availability] || "";
+      var badges = '';
+      if (m.kit_liked) badges += '<span class="kl-card-badge kl-badge-liked" title="Kit liked this">&#10084;</span>';
+      if (m.kit_rewatch) badges += '<span class="kl-card-badge kl-badge-rewatch" title="Rewatch">&#8635;</span>';
 
       return '<div class="kl-card' + (isWatched ? " watched" : "") + '" data-id="' + m.id + '" onclick="openDetail(' + m.id + ')">'
         + '<div class="kl-watched-badge">&#10003;</div>'
         + posterHtml
+        + badges
         + '<div class="kl-card-info">'
         + '<div class="kl-card-title">' + esc(m.title) + '</div>'
         + '<div class="kl-card-meta">'
         + (m.year ? '<span class="kl-card-year">' + m.year + '</span>' : '')
         + (m.genre ? '<span class="kl-card-genre">' + esc(m.genre) + '</span>' : '')
-        + (availLabel ? '<span class="kl-card-avail' + availClass + '">' + availLabel + '</span>' : '')
         + '</div>'
         + '<div class="kl-card-rating">' + renderStars(m.kit_rating) + '</div>'
         + '</div></div>';
@@ -1043,7 +1080,10 @@
     currentDetailMovie = m;
 
     document.getElementById("detailTitle").textContent = m.title;
-    document.getElementById("detailMeta").textContent = [m.year, m.genre, m.availability].filter(Boolean).join(" \u00B7 ");
+    var metaParts = [m.year, m.genre].filter(Boolean);
+    if (m.kit_liked) metaParts.push("\u2764 Liked");
+    if (m.kit_rewatch) metaParts.push("\u21BB Rewatch");
+    document.getElementById("detailMeta").textContent = metaParts.join(" \u00B7 ");
     document.getElementById("detailStars").textContent = "Kit's Rating: " + renderStars(m.kit_rating) + (m.kit_rating ? " (" + m.kit_rating + "/5)" : " (unrated)");
     document.getElementById("detailReview").textContent = m.kit_review || "";
 
@@ -1051,12 +1091,7 @@
     if (m.poster_url) { poster.src = m.poster_url; poster.style.display = "block"; }
     else { poster.style.display = "none"; }
 
-    var availEl = document.getElementById("detailAvail");
-    if (m.availability) {
-      var cls = "kl-card-avail kl-card-avail-" + m.availability;
-      var lbl = { streaming: "Streaming", in_theaters: "In Theaters", classic: "Classic", coming_soon: "Coming Soon" }[m.availability] || m.availability;
-      availEl.innerHTML = '<span class="' + cls + '">' + lbl + '</span>';
-    } else { availEl.innerHTML = ""; }
+    document.getElementById("detailAvail").innerHTML = "";
 
     // Watched button state
     var wBtn = document.getElementById("detailWatchedBtn");
@@ -1287,6 +1322,12 @@
   // Year filter
   document.getElementById("yearFilter").addEventListener("change", function() {
     filters.year = this.value;
+    renderGrid();
+  });
+
+  // Genre filter
+  document.getElementById("genreFilter").addEventListener("change", function() {
+    filters.genre = this.value;
     renderGrid();
   });
 

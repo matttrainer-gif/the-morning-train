@@ -275,8 +275,8 @@ def scrape_all_diary(session) -> list[dict]:
 # Step 3: Enrich with film detail pages (TMDB ID, genres)
 # ---------------------------------------------------------------------------
 
-def enrich_film(session, slug: str) -> dict:
-    """Fetch a film's detail page for TMDB ID and genres."""
+def enrich_film(session, slug: str, poster_only: bool = False) -> dict:
+    """Fetch a film's detail page for TMDB ID, genres, and poster."""
     url = f"https://letterboxd.com/film/{slug}/"
     try:
         resp = session.get(url, timeout=15)
@@ -288,57 +288,64 @@ def enrich_film(session, slug: str) -> dict:
     soup = BeautifulSoup(resp.text, "html.parser")
     result = {}
 
-    # TMDB ID from body tag
-    body = soup.select_one("body")
-    if body:
-        tmdb_id = body.get("data-tmdb-id", "")
-        if tmdb_id:
-            result["tmdb_id"] = int(tmdb_id)
+    if not poster_only:
+        # TMDB ID from body tag
+        body = soup.select_one("body")
+        if body:
+            tmdb_id = body.get("data-tmdb-id", "")
+            if tmdb_id:
+                result["tmdb_id"] = int(tmdb_id)
 
-    # Genres (first few, skip the verbose nano-genre descriptions)
-    genre_links = soup.select("#tab-genres a.text-slug")
-    genres = []
-    for g in genre_links:
-        text = g.get_text(strip=True)
-        # Only keep standard short genre names
-        if len(text) < 20 and text[0].isupper():
-            genres.append(text)
-    if genres:
-        result["genres"] = genres[:5]
+        # Genres (first few, skip the verbose nano-genre descriptions)
+        genre_links = soup.select("#tab-genres a.text-slug")
+        genres = []
+        for g in genre_links:
+            text = g.get_text(strip=True)
+            if len(text) < 20 and text[0].isupper():
+                genres.append(text)
+        if genres:
+            result["genres"] = genres[:5]
 
-    # Poster image
-    poster_el = soup.select_one('img.image[srcset*="ltrbxd"], img.image[src*="ltrbxd"]')
-    if poster_el:
-        srcset = poster_el.get("srcset", "")
-        src = poster_el.get("src", "")
-        poster_url = ""
-        if srcset:
-            # Get the largest image from srcset
-            parts = srcset.split(",")
-            for part in reversed(parts):
-                url_part = part.strip().split(" ")[0]
-                if url_part.startswith("http") and "empty-poster" not in url_part:
-                    poster_url = url_part
-                    break
-        if not poster_url and src and "empty-poster" not in src:
-            poster_url = src
-        if poster_url:
+    # Poster from og:image meta tag (most reliable)
+    og_image = soup.select_one('meta[property="og:image"]')
+    if og_image:
+        poster_url = og_image.get("content", "")
+        if poster_url and "empty-poster" not in poster_url:
+            # Convert crop image to proper poster aspect ratio
+            # og:image is square crop, LD+JSON has better poster ratio
             result["poster_url"] = poster_url
+
+    # Try LD+JSON for better poster (portrait aspect ratio)
+    for script in soup.select('script[type="application/ld+json"]'):
+        try:
+            text = script.string or ""
+            if text.startswith("/*"):
+                text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL).strip()
+            ld = json.loads(text)
+            if ld.get("image") and "empty-poster" not in ld["image"]:
+                result["poster_url"] = ld["image"]
+                break
+        except (json.JSONDecodeError, Exception):
+            continue
 
     return result
 
 
-def enrich_films(session, films: list[dict], batch_size: int = 50):
-    """Enrich films with TMDB IDs and genres from detail pages."""
-    slugs_to_enrich = [f for f in films if f.get("slug") and not f.get("tmdb_id")]
-    total = len(slugs_to_enrich)
-    print(f"Enriching {total} films with TMDB IDs and genres...")
+def enrich_films(session, films: list[dict], poster_only: bool = False):
+    """Enrich films with TMDB IDs, genres, and posters from detail pages."""
+    if poster_only:
+        to_enrich = [f for f in films if f.get("slug") and not f.get("poster_url")]
+    else:
+        to_enrich = [f for f in films if f.get("slug") and not f.get("tmdb_id")]
+    total = len(to_enrich)
+    label = "posters" if poster_only else "TMDB IDs, genres, and posters"
+    print(f"Enriching {total} films with {label}...")
 
     enriched = 0
     errors = 0
-    for i, film in enumerate(slugs_to_enrich):
+    for i, film in enumerate(to_enrich):
         slug = film["slug"]
-        detail = enrich_film(session, slug)
+        detail = enrich_film(session, slug, poster_only=poster_only)
         if detail:
             film.update(detail)
             enriched += 1
@@ -347,7 +354,7 @@ def enrich_films(session, films: list[dict], batch_size: int = 50):
 
         if (i + 1) % 50 == 0:
             print(f"  Progress: {i + 1}/{total} (enriched={enriched}, errors={errors})")
-            time.sleep(2.0)  # Extra pause every 50
+            time.sleep(2.0)
         else:
             time.sleep(0.8)
 
@@ -570,9 +577,41 @@ def main():
     parser.add_argument("--push-only", action="store_true", help="Push existing local catalog without scraping")
     parser.add_argument("--no-push", action="store_true", help="Scrape and save locally without pushing to Worker")
     parser.add_argument("--skip-enrich", action="store_true", help="Skip enrichment (TMDB IDs, genres, posters)")
+    parser.add_argument("--posters-only", action="store_true", help="Only fetch missing poster images for existing catalog")
     args = parser.parse_args()
 
     CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    if args.posters_only:
+        if not CATALOG_PATH.exists():
+            print(f"[ERROR] No local catalog at {CATALOG_PATH}")
+            sys.exit(1)
+        with open(CATALOG_PATH) as f:
+            catalog = json.load(f)
+        print(f"Loaded {len(catalog)} movies from local catalog")
+
+        # Re-add slugs from letterboxd URLs for enrichment
+        for m in catalog:
+            if not m.get("slug") and m.get("letterboxd_url"):
+                slug_match = re.search(r"/film/([^/]+)/?", m["letterboxd_url"])
+                if slug_match:
+                    m["slug"] = slug_match.group(1)
+
+        session = create_session()
+        enrich_films(session, catalog, poster_only=True)
+
+        # Clean up slugs before saving
+        for m in catalog:
+            m.pop("slug", None)
+
+        with open(CATALOG_PATH, "w") as f:
+            json.dump(catalog, f, indent=2)
+        print(f"\nSaved to {CATALOG_PATH}")
+        print(f"With posters: {sum(1 for m in catalog if m.get('poster_url'))}")
+
+        if not args.no_push:
+            push_to_worker(catalog)
+        return
 
     if args.push_only:
         if not CATALOG_PATH.exists():
