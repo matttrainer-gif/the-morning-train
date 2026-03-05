@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-Kit Lazer Letterboxd Scraper — One-time backfill + incremental sync
+Kit Lazer Letterboxd Scraper — Full backfill + incremental sync
 
-Scrapes Kit Lazer's (@moviesaretherapy) full Letterboxd diary,
-merges with RSS data for richer fields, assigns mood tags,
-and pushes the catalog to the Cloudflare Worker KV.
+Scrapes Kit Lazer's (@moviesaretherapy) complete Letterboxd history:
+  1. Ratings pages (all ~3800 rated films with star ratings)
+  2. Diary pages (watch dates, rewatch flags, liked status)
+  3. Film detail pages (TMDB IDs, genres, posters) — optional enrichment
+  4. RSS feed (reviews, precise ratings for recent 50)
 
 Usage:
-  # Full backfill (scrapes all diary pages)
+  # Full backfill (ratings + diary + enrichment)
   python scrape_letterboxd.py
+
+  # Scrape without enrichment (faster, no TMDB/genre/poster)
+  python scrape_letterboxd.py --skip-enrich
 
   # Push existing local catalog to KV
   python scrape_letterboxd.py --push-only
@@ -18,7 +23,6 @@ Usage:
 """
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -26,19 +30,25 @@ import sys
 import time
 from pathlib import Path
 
+import cloudscraper
 import feedparser
 import requests
 from bs4 import BeautifulSoup
 
 LETTERBOXD_USER = "moviesrtherapy"
 RSS_URL = f"https://letterboxd.com/{LETTERBOXD_USER}/rss/"
-DIARY_URL = f"https://letterboxd.com/{LETTERBOXD_USER}/films/diary/page/{{page}}/"
 CATALOG_PATH = Path(__file__).parent / "data" / "kit-lazer-catalog.json"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 # Genre → mood mapping
@@ -66,17 +76,287 @@ GENRE_MOODS = {
 }
 
 
-def assign_moods(genre: str, rating: float = 0) -> list[str]:
-    """Assign mood tags based on genre."""
+def assign_moods(genres: list[str], rating: float = 0) -> list[str]:
+    """Assign mood tags based on genres."""
     moods = set()
-    for g in [genre]:
+    for g in genres:
         for mood in GENRE_MOODS.get(g, []):
             moods.add(mood)
-    # High-rated films get "comfort_watch" as a bonus
     if rating >= 4.5 and "comfort_watch" not in moods:
         moods.add("feel_good")
     return sorted(moods) if moods else ["chill"]
 
+
+def create_session() -> cloudscraper.CloudScraper:
+    """Create a cloudscraper session that bypasses Cloudflare."""
+    session = cloudscraper.create_scraper(
+        browser={"browser": "chrome", "platform": "darwin", "mobile": False}
+    )
+    return session
+
+
+# ---------------------------------------------------------------------------
+# Step 1: Scrape ratings pages (all rated films)
+# ---------------------------------------------------------------------------
+
+def scrape_ratings_page(session, page_num: int) -> list[dict]:
+    """Scrape one page of the Letterboxd ratings grid (72 films per page)."""
+    url = f"https://letterboxd.com/{LETTERBOXD_USER}/films/ratings/page/{page_num}/"
+    try:
+        resp = session.get(url, timeout=15)
+        if resp.status_code != 200:
+            return []
+    except requests.RequestException as e:
+        print(f"  [WARN] Ratings page {page_num}: {e}")
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    entries = []
+
+    # Each film is a react-component div inside a li.griditem
+    films = soup.select("div.react-component[data-item-name]")
+    if not films:
+        return []
+
+    for film_el in films:
+        name_with_year = film_el.get("data-item-name", "")
+        slug = film_el.get("data-item-slug", "")
+        film_id = film_el.get("data-film-id", "0")
+
+        # Parse "Title (Year)" format
+        m = re.match(r"^(.+?)\s*\((\d{4})\)$", name_with_year)
+        if m:
+            title = m.group(1).strip()
+            year = int(m.group(2))
+        else:
+            title = name_with_year.strip()
+            year = 0
+
+        # Find rating from nearest rated-N class
+        rating = 0.0
+        parent = film_el.parent
+        if parent:
+            rated_el = parent.select_one("[class*='rated-']")
+            if rated_el:
+                rc = " ".join(rated_el.get("class", []))
+                rm = re.search(r"rated-(\d+)", rc)
+                if rm:
+                    rating = int(rm.group(1)) / 2.0
+
+        entries.append({
+            "slug": slug,
+            "film_id": int(film_id) if film_id else 0,
+            "title": title,
+            "year": year,
+            "kit_rating": rating,
+        })
+
+    return entries
+
+
+def scrape_all_ratings(session) -> list[dict]:
+    """Scrape all pages of rated films."""
+    print("Scraping ratings pages...")
+    all_films = []
+    page = 1
+
+    while True:
+        films = scrape_ratings_page(session, page)
+        if not films:
+            print(f"  Stopped at page {page} (no entries)")
+            break
+        all_films.extend(films)
+        print(f"  Page {page}: {len(films)} films (total: {len(all_films)})")
+        page += 1
+        time.sleep(1.0)
+
+    return all_films
+
+
+# ---------------------------------------------------------------------------
+# Step 2: Scrape diary pages (watch dates, rewatches, likes)
+# ---------------------------------------------------------------------------
+
+def scrape_diary_page(session, page_num: int) -> list[dict]:
+    """Scrape one page of the Letterboxd diary."""
+    url = f"https://letterboxd.com/{LETTERBOXD_USER}/films/diary/page/{page_num}/"
+    try:
+        resp = session.get(url, timeout=15)
+        if resp.status_code != 200:
+            return []
+    except requests.RequestException as e:
+        print(f"  [WARN] Diary page {page_num}: {e}")
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    entries = []
+
+    rows = soup.select("tr.diary-entry-row")
+    for row in rows:
+        try:
+            poster = row.select_one("div.react-component[data-item-name]")
+            if not poster:
+                continue
+
+            name_with_year = poster.get("data-item-name", "")
+            slug = poster.get("data-item-slug", "")
+
+            m = re.match(r"^(.+?)\s*\((\d{4})\)$", name_with_year)
+            if m:
+                title = m.group(1).strip()
+                year = int(m.group(2))
+            else:
+                title = name_with_year.strip()
+                year = 0
+
+            # Watch date from calendar links
+            watched_date = ""
+            month_el = row.select_one("a.month")
+            year_el = row.select_one("a.year")
+            day_el = row.select_one("a.daydate, td.col-daydate a")
+            if month_el and year_el and day_el:
+                month_href = month_el.get("href", "")
+                dm = re.search(r"/for/(\d{4})/(\d{2})/", month_href)
+                day_text = day_el.get_text(strip=True).zfill(2)
+                if dm:
+                    watched_date = f"{dm.group(1)}-{dm.group(2)}-{day_text}"
+
+            # Rewatch
+            rewatch = bool(row.select_one(".icon-rewatch"))
+
+            # Liked
+            liked = bool(row.select_one(".icon-liked"))
+
+            # Rating on diary row
+            rating = 0.0
+            rated_el = row.select_one("[class*='rated-']")
+            if rated_el:
+                rc = " ".join(rated_el.get("class", []))
+                rm = re.search(r"rated-(\d+)", rc)
+                if rm:
+                    rating = int(rm.group(1)) / 2.0
+
+            entries.append({
+                "slug": slug,
+                "title": title,
+                "year": year,
+                "kit_watched_date": watched_date,
+                "kit_rewatch": rewatch,
+                "kit_liked": liked,
+                "kit_rating": rating,
+            })
+        except Exception as e:
+            print(f"  [WARN] Diary row parse error: {e}")
+            continue
+
+    return entries
+
+
+def scrape_all_diary(session) -> list[dict]:
+    """Scrape all pages of the diary."""
+    print("Scraping diary pages...")
+    all_entries = []
+    page = 1
+
+    while True:
+        entries = scrape_diary_page(session, page)
+        if not entries:
+            print(f"  Stopped at page {page} (no entries)")
+            break
+        all_entries.extend(entries)
+        print(f"  Page {page}: {len(entries)} entries (total: {len(all_entries)})")
+        page += 1
+        time.sleep(1.0)
+
+    return all_entries
+
+
+# ---------------------------------------------------------------------------
+# Step 3: Enrich with film detail pages (TMDB ID, genres)
+# ---------------------------------------------------------------------------
+
+def enrich_film(session, slug: str) -> dict:
+    """Fetch a film's detail page for TMDB ID and genres."""
+    url = f"https://letterboxd.com/film/{slug}/"
+    try:
+        resp = session.get(url, timeout=15)
+        if resp.status_code != 200:
+            return {}
+    except requests.RequestException:
+        return {}
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    result = {}
+
+    # TMDB ID from body tag
+    body = soup.select_one("body")
+    if body:
+        tmdb_id = body.get("data-tmdb-id", "")
+        if tmdb_id:
+            result["tmdb_id"] = int(tmdb_id)
+
+    # Genres (first few, skip the verbose nano-genre descriptions)
+    genre_links = soup.select("#tab-genres a.text-slug")
+    genres = []
+    for g in genre_links:
+        text = g.get_text(strip=True)
+        # Only keep standard short genre names
+        if len(text) < 20 and text[0].isupper():
+            genres.append(text)
+    if genres:
+        result["genres"] = genres[:5]
+
+    # Poster image
+    poster_el = soup.select_one('img.image[srcset*="ltrbxd"], img.image[src*="ltrbxd"]')
+    if poster_el:
+        srcset = poster_el.get("srcset", "")
+        src = poster_el.get("src", "")
+        poster_url = ""
+        if srcset:
+            # Get the largest image from srcset
+            parts = srcset.split(",")
+            for part in reversed(parts):
+                url_part = part.strip().split(" ")[0]
+                if url_part.startswith("http") and "empty-poster" not in url_part:
+                    poster_url = url_part
+                    break
+        if not poster_url and src and "empty-poster" not in src:
+            poster_url = src
+        if poster_url:
+            result["poster_url"] = poster_url
+
+    return result
+
+
+def enrich_films(session, films: list[dict], batch_size: int = 50):
+    """Enrich films with TMDB IDs and genres from detail pages."""
+    slugs_to_enrich = [f for f in films if f.get("slug") and not f.get("tmdb_id")]
+    total = len(slugs_to_enrich)
+    print(f"Enriching {total} films with TMDB IDs and genres...")
+
+    enriched = 0
+    errors = 0
+    for i, film in enumerate(slugs_to_enrich):
+        slug = film["slug"]
+        detail = enrich_film(session, slug)
+        if detail:
+            film.update(detail)
+            enriched += 1
+        else:
+            errors += 1
+
+        if (i + 1) % 50 == 0:
+            print(f"  Progress: {i + 1}/{total} (enriched={enriched}, errors={errors})")
+            time.sleep(2.0)  # Extra pause every 50
+        else:
+            time.sleep(0.8)
+
+    print(f"  Enrichment complete: {enriched} enriched, {errors} errors")
+
+
+# ---------------------------------------------------------------------------
+# Step 4: Parse RSS feed (reviews + precise ratings for recent 50)
+# ---------------------------------------------------------------------------
 
 def parse_rss() -> list[dict]:
     """Parse Letterboxd RSS feed for the 50 most recent entries with rich data."""
@@ -85,10 +365,8 @@ def parse_rss() -> list[dict]:
     movies = []
 
     for entry in feed.entries:
-        # Skip non-film entries (lists, etc.)
         film_title = getattr(entry, "letterboxd_filmtitle", None)
         if not film_title:
-            # Try parsing from title
             title_match = re.match(r"^(.+?),\s*(\d{4})", entry.get("title", ""))
             if not title_match:
                 continue
@@ -107,216 +385,140 @@ def parse_rss() -> list[dict]:
 
         # Extract review text
         review_text = re.sub(r"<[^>]+>", "", desc).strip()
-        # Remove "Watched on ..." default text
         if review_text.startswith("Watched on"):
             review_text = ""
 
-        movie = {
+        movies.append({
             "tmdb_id": int(tmdb_str) if tmdb_str else 0,
             "title": film_title.strip(),
             "year": int(year_str) if year_str else 0,
-            "genre": "",  # RSS doesn't have genre, will be enriched later
-            "moods": [],
             "kit_rating": float(rating_str) if rating_str else 0,
             "kit_review": review_text[:500],
             "kit_liked": getattr(entry, "letterboxd_memberlike", "No") == "Yes",
             "kit_rewatch": getattr(entry, "letterboxd_rewatch", "No") == "Yes",
             "kit_watched_date": getattr(entry, "letterboxd_watcheddate", ""),
-            "availability": "",
             "poster_url": poster_url,
             "letterboxd_url": entry.get("link", ""),
-            "sources": [{"type": "letterboxd", "url": entry.get("link", "")}],
-        }
-        movies.append(movie)
+        })
 
     print(f"  Found {len(movies)} movies in RSS")
     return movies
 
 
-def scrape_diary_page(page_num: int) -> list[dict]:
-    """Scrape one page of the Letterboxd diary."""
-    url = DIARY_URL.format(page=page_num)
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        if resp.status_code == 404:
-            return []
-        if resp.status_code != 200:
-            print(f"  [WARN] Page {page_num}: HTTP {resp.status_code}")
-            return []
-    except requests.RequestException as e:
-        print(f"  [WARN] Page {page_num}: {e}")
-        return []
+# ---------------------------------------------------------------------------
+# Merge and deduplicate
+# ---------------------------------------------------------------------------
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    entries = []
-
-    # Letterboxd diary uses table rows with class "diary-entry-row"
-    rows = soup.select("tr.diary-entry-row")
-    if not rows:
-        # Try alternate selectors
-        rows = soup.select(".diary-entry-row")
-
-    for row in rows:
-        try:
-            # Film title
-            title_el = row.select_one("td.td-film-details h3 a, .headline-3 a, h3.headline-3 a")
-            if not title_el:
-                title_el = row.select_one("a[href*='/film/']")
-            if not title_el:
-                continue
-
-            title = title_el.get_text(strip=True)
-            film_slug = title_el.get("href", "")
-
-            # Year
-            year_el = row.select_one("td.td-released, .td-released")
-            year = 0
-            if year_el:
-                year_text = year_el.get_text(strip=True)
-                if year_text.isdigit():
-                    year = int(year_text)
-
-            # Rating (count star elements)
-            rating = 0.0
-            rating_el = row.select_one("td.td-rating .rating, .td-rating .rating")
-            if rating_el:
-                # Stars are often encoded as a class like "rated-8" (meaning 4 stars, each star = 2)
-                rating_class = " ".join(rating_el.get("class", []))
-                rated_match = re.search(r"rated-(\d+)", rating_class)
-                if rated_match:
-                    rating = int(rated_match.group(1)) / 2.0
-                else:
-                    # Count star spans
-                    stars = rating_el.select(".star")
-                    if stars:
-                        rating = len(stars)
-
-            # Watched date
-            date_el = row.select_one("td.td-calendar a, .td-calendar a")
-            watched_date = ""
-            if date_el:
-                href = date_el.get("href", "")
-                # Extract date from URL like /moviesrtherapy/films/diary/for/2026/03/04/
-                date_match = re.search(r"/for/(\d{4})/(\d{2})/(\d{2})/", href)
-                if date_match:
-                    watched_date = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
-
-            # Rewatch indicator
-            rewatch = bool(row.select_one(".icon-rewatch, .td-rewatch .icon-status-off") is None and row.select_one(".td-rewatch .icon-status-on"))
-
-            # Liked
-            liked = bool(row.select_one(".icon-liked, .like-link-target.icon-liked"))
-
-            # Build letterboxd URL
-            letterboxd_url = ""
-            if film_slug:
-                letterboxd_url = f"https://letterboxd.com{film_slug}" if film_slug.startswith("/") else film_slug
-
-            entries.append({
-                "tmdb_id": 0,  # Not available from diary scrape
-                "title": title,
-                "year": year,
+def merge_all(ratings: list[dict], diary: list[dict], rss: list[dict]) -> list[dict]:
+    """Merge ratings (all films + ratings), diary (dates/likes), and RSS (reviews/posters)."""
+    # Start with ratings as the base (most comprehensive list)
+    by_slug = {}
+    for r in ratings:
+        slug = r.get("slug", "")
+        if slug:
+            by_slug[slug] = {
+                "slug": slug,
+                "film_id": r.get("film_id", 0),
+                "title": r["title"],
+                "year": r["year"],
+                "kit_rating": r.get("kit_rating", 0),
+                "tmdb_id": r.get("tmdb_id", 0),
+                "genres": r.get("genres", []),
                 "genre": "",
                 "moods": [],
-                "kit_rating": rating,
                 "kit_review": "",
-                "kit_liked": liked,
-                "kit_rewatch": rewatch,
-                "kit_watched_date": watched_date,
+                "kit_liked": False,
+                "kit_rewatch": False,
+                "kit_watched_date": "",
+                "availability": "",
+                "poster_url": r.get("poster_url", ""),
+                "letterboxd_url": f"https://letterboxd.com/film/{slug}/",
+                "sources": [{"type": "letterboxd", "url": f"https://letterboxd.com/film/{slug}/"}],
+            }
+
+    # Merge diary data (watch dates, likes, rewatches)
+    for d in diary:
+        slug = d.get("slug", "")
+        if slug and slug in by_slug:
+            entry = by_slug[slug]
+            # Take the most recent watch date
+            if d.get("kit_watched_date") and (not entry["kit_watched_date"] or d["kit_watched_date"] > entry["kit_watched_date"]):
+                entry["kit_watched_date"] = d["kit_watched_date"]
+            if d.get("kit_liked"):
+                entry["kit_liked"] = True
+            if d.get("kit_rewatch"):
+                entry["kit_rewatch"] = True
+            # If diary has a rating but ratings page didn't
+            if d.get("kit_rating") and not entry.get("kit_rating"):
+                entry["kit_rating"] = d["kit_rating"]
+        elif slug:
+            # Film in diary but not rated — add it
+            by_slug[slug] = {
+                "slug": slug,
+                "film_id": 0,
+                "title": d["title"],
+                "year": d["year"],
+                "kit_rating": d.get("kit_rating", 0),
+                "tmdb_id": 0,
+                "genres": [],
+                "genre": "",
+                "moods": [],
+                "kit_review": "",
+                "kit_liked": d.get("kit_liked", False),
+                "kit_rewatch": d.get("kit_rewatch", False),
+                "kit_watched_date": d.get("kit_watched_date", ""),
                 "availability": "",
                 "poster_url": "",
-                "letterboxd_url": letterboxd_url,
-                "sources": [{"type": "letterboxd", "url": letterboxd_url}],
-            })
-        except Exception as e:
-            print(f"  [WARN] Failed to parse row: {e}")
-            continue
+                "letterboxd_url": f"https://letterboxd.com/film/{slug}/",
+                "sources": [{"type": "letterboxd", "url": f"https://letterboxd.com/film/{slug}/"}],
+            }
 
-    return entries
+    # Merge RSS data (reviews, posters, TMDB IDs)
+    for r in rss:
+        title_key = f"{r['title'].lower().strip()}|{r['year']}"
+        # Find matching slug
+        matched_slug = None
+        for slug, entry in by_slug.items():
+            if f"{entry['title'].lower().strip()}|{entry['year']}" == title_key:
+                matched_slug = slug
+                break
+        if matched_slug:
+            entry = by_slug[matched_slug]
+            if r.get("kit_review") and not entry.get("kit_review"):
+                entry["kit_review"] = r["kit_review"]
+            if r.get("poster_url") and not entry.get("poster_url"):
+                entry["poster_url"] = r["poster_url"]
+            if r.get("tmdb_id") and not entry.get("tmdb_id"):
+                entry["tmdb_id"] = r["tmdb_id"]
+            if r.get("kit_watched_date") and not entry.get("kit_watched_date"):
+                entry["kit_watched_date"] = r["kit_watched_date"]
 
+    # Build final list
+    result = list(by_slug.values())
 
-def scrape_full_diary() -> list[dict]:
-    """Scrape all pages of the Letterboxd diary."""
-    print("Scraping Letterboxd diary pages...")
-    all_entries = []
-    page = 1
-
-    while True:
-        entries = scrape_diary_page(page)
-        if not entries:
-            print(f"  Stopped at page {page} (no entries)")
-            break
-        all_entries.extend(entries)
-        print(f"  Page {page}: {len(entries)} entries (total: {len(all_entries)})")
-        page += 1
-        time.sleep(1.5)  # Be polite
-
-    return all_entries
-
-
-def merge_catalogs(rss_movies: list[dict], diary_movies: list[dict]) -> list[dict]:
-    """Merge RSS data (rich) with diary data (comprehensive). RSS wins for overlapping entries."""
-    # Index RSS by title+year for matching
-    rss_index = {}
-    for m in rss_movies:
-        key = f"{m['title'].lower().strip()}|{m['year']}"
-        rss_index[key] = m
-
-    merged = list(rss_movies)  # Start with RSS entries
-    added_keys = set(rss_index.keys())
-
-    for dm in diary_movies:
-        key = f"{dm['title'].lower().strip()}|{dm['year']}"
-        if key in added_keys:
-            # RSS already has this entry — merge any missing data
-            existing = rss_index[key]
-            if not existing.get("kit_watched_date") and dm.get("kit_watched_date"):
-                existing["kit_watched_date"] = dm["kit_watched_date"]
-            if not existing.get("kit_rating") and dm.get("kit_rating"):
-                existing["kit_rating"] = dm["kit_rating"]
-        else:
-            merged.append(dm)
-            added_keys.add(key)
-
-    return merged
-
-
-def deduplicate(movies: list[dict]) -> list[dict]:
-    """Remove duplicate entries, keeping the one with the most data."""
-    seen = {}
-    for m in movies:
-        key = f"{m['title'].lower().strip()}|{m['year']}"
-        if key in seen:
-            existing = seen[key]
-            # Keep the entry with more data (higher tmdb_id, longer review, poster)
-            if (m.get("tmdb_id", 0) > existing.get("tmdb_id", 0) or
-                len(m.get("kit_review", "")) > len(existing.get("kit_review", "")) or
-                (m.get("poster_url") and not existing.get("poster_url"))):
-                # Merge fields from existing into m
-                if not m.get("poster_url") and existing.get("poster_url"):
-                    m["poster_url"] = existing["poster_url"]
-                if not m.get("tmdb_id") and existing.get("tmdb_id"):
-                    m["tmdb_id"] = existing["tmdb_id"]
-                if not m.get("kit_review") and existing.get("kit_review"):
-                    m["kit_review"] = existing["kit_review"]
-                seen[key] = m
-        else:
-            seen[key] = m
-
-    result = list(seen.values())
-    # Assign IDs and mood tags
+    # Assign genres, moods, IDs
     for i, m in enumerate(result):
         m["id"] = i
-        if not m.get("moods"):
-            m["moods"] = assign_moods(m.get("genre", ""), m.get("kit_rating", 0))
-        m["added_date"] = m.get("added_date", time.strftime("%Y-%m-%d"))
+        genres = m.get("genres", [])
+        if genres:
+            m["genre"] = genres[0]
+        m["moods"] = assign_moods(genres, m.get("kit_rating", 0))
+        m["added_date"] = time.strftime("%Y-%m-%d")
         m["last_updated"] = time.strftime("%Y-%m-%d")
+        # Clean up internal fields
+        m.pop("slug", None)
+        m.pop("film_id", None)
+        m.pop("genres", None)
 
     # Sort by watched date (newest first), then by rating
     result.sort(key=lambda m: (m.get("kit_watched_date", ""), m.get("kit_rating", 0)), reverse=True)
 
     return result
 
+
+# ---------------------------------------------------------------------------
+# Push to Worker
+# ---------------------------------------------------------------------------
 
 def push_to_worker(catalog: list[dict]):
     """Push catalog to Cloudflare Worker KV via sync endpoint."""
@@ -330,7 +532,6 @@ def push_to_worker(catalog: list[dict]):
 
     print(f"Pushing {len(catalog)} movies to Worker at {worker_url}...")
 
-    # Push in batches of 100 to avoid huge payloads
     batch_size = 100
     total_added = 0
     total_updated = 0
@@ -360,10 +561,15 @@ def push_to_worker(catalog: list[dict]):
     print(f"\nSync complete: {total_added} added, {total_updated} updated")
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 def main():
     parser = argparse.ArgumentParser(description="Kit Lazer Letterboxd Scraper")
     parser.add_argument("--push-only", action="store_true", help="Push existing local catalog without scraping")
     parser.add_argument("--no-push", action="store_true", help="Scrape and save locally without pushing to Worker")
+    parser.add_argument("--skip-enrich", action="store_true", help="Skip enrichment (TMDB IDs, genres, posters)")
     args = parser.parse_args()
 
     CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -378,27 +584,38 @@ def main():
         push_to_worker(catalog)
         return
 
-    # Step 1: Parse RSS (rich data for recent 50)
-    rss_movies = parse_rss()
+    session = create_session()
+    print("Session initialized\n")
 
-    # Step 2: Scrape full diary (all history)
-    diary_movies = scrape_full_diary()
+    # Step 1: Scrape all rated films
+    ratings = scrape_all_ratings(session)
 
-    # Step 3: Merge and deduplicate
-    merged = merge_catalogs(rss_movies, diary_movies)
-    catalog = deduplicate(merged)
+    # Step 2: Scrape diary (watch dates, likes, rewatches)
+    diary = scrape_all_diary(session)
+
+    # Step 3: Parse RSS (reviews, posters, TMDB IDs for recent 50)
+    rss = parse_rss()
+
+    # Step 4: Enrich with TMDB IDs and genres (optional, slow)
+    if not args.skip_enrich:
+        enrich_films(session, ratings)
+
+    # Step 5: Merge everything
+    catalog = merge_all(ratings, diary, rss)
 
     print(f"\nFinal catalog: {len(catalog)} unique movies")
     print(f"  With ratings: {sum(1 for m in catalog if m.get('kit_rating', 0) > 0)}")
     print(f"  With TMDB IDs: {sum(1 for m in catalog if m.get('tmdb_id', 0) > 0)}")
+    print(f"  With genres: {sum(1 for m in catalog if m.get('genre'))}")
     print(f"  With posters: {sum(1 for m in catalog if m.get('poster_url'))}")
+    print(f"  With watch dates: {sum(1 for m in catalog if m.get('kit_watched_date'))}")
 
-    # Step 4: Save locally
+    # Step 6: Save locally
     with open(CATALOG_PATH, "w") as f:
         json.dump(catalog, f, indent=2)
     print(f"\nSaved to {CATALOG_PATH}")
 
-    # Step 5: Push to Worker
+    # Step 7: Push to Worker
     if not args.no_push:
         push_to_worker(catalog)
     else:
