@@ -12,6 +12,7 @@ Features:
   - Podcast commentary section with cross-show comparison
 """
 
+import html
 import os
 import sys
 import json
@@ -249,7 +250,7 @@ def fetch_articles(category_name: str, feeds: list[tuple[str, str]]) -> list[Art
 
                 summary = ""
                 if hasattr(entry, "summary"):
-                    summary = re.sub(r"<[^>]+>", "", entry.summary)[:500]
+                    summary = html.unescape(re.sub(r"<[^>]+>", "", entry.summary))[:500]
 
                 # Extract image URL from RSS entry
                 image_url = ""
@@ -269,7 +270,7 @@ def fetch_articles(category_name: str, feeds: list[tuple[str, str]]) -> list[Art
                             break
 
                 articles.append(Article(
-                    title=entry.get("title", "Untitled"),
+                    title=html.unescape(entry.get("title", "Untitled")),
                     link=entry.get("link", ""),
                     source=source_name,
                     published=published.isoformat() if published else "Unknown",
@@ -685,8 +686,17 @@ Include verification level and bias_spectrum for each story."""
 
         result = json.loads(text)
 
+        # Unescape HTML entities in text fields
+        if "section_summary" in result:
+            result["section_summary"] = html.unescape(result["section_summary"])
+
         # Ensure all stories have required fields with defaults
         for story in result.get("stories", []):
+            for text_field in ("headline", "analysis"):
+                if text_field in story:
+                    story[text_field] = html.unescape(story[text_field])
+            for i, fact in enumerate(story.get("key_facts", [])):
+                story["key_facts"][i] = html.unescape(fact)
             if "verification" not in story:
                 story["verification"] = "confirmed"
             if "bias_spectrum" not in story:
