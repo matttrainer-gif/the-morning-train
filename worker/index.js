@@ -456,7 +456,12 @@ async function handleKitLazerSync(request, env) {
       if (movie.poster_url && !ex.poster_url) ex.poster_url = movie.poster_url;
       if (movie.tmdb_id && !ex.tmdb_id) ex.tmdb_id = movie.tmdb_id;
       if (movie.genre && !ex.genre) ex.genre = movie.genre;
-      if (movie.moods && movie.moods.length && (!ex.moods || !ex.moods.length)) ex.moods = movie.moods;
+      if (movie.moods && movie.moods.length > 0) {
+        // Update moods if incoming has better data (more specific than "chill")
+        const incomingHasReal = movie.moods.some(m => m !== "chill");
+        const existingHasReal = ex.moods && ex.moods.some(m => m !== "chill");
+        if (incomingHasReal || !existingHasReal) ex.moods = movie.moods;
+      }
       if (movie.availability && !ex.availability) ex.availability = movie.availability;
       // Merge sources
       const existingUrls = new Set((ex.sources || []).map(s => s.url));
