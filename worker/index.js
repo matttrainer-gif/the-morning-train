@@ -8,9 +8,17 @@
  *   POST /prefs/:token  — Save user preferences (personalization)
  *   POST /track/:token  — Track reading engagement (personalization)
  *
+ * Kit Lazer Picks:
+ *   POST /kit-lazer/sync              — Admin: push movies to catalog (auth required)
+ *   GET  /kit-lazer/catalog           — Public: full movie catalog
+ *   GET  /kit-lazer/moods             — Public: mood index
+ *   POST /kit-lazer/recommend         — Public: AI movie recommendations (Claude)
+ *   GET  /kit-lazer/user/:token       — Public: user watch profile
+ *   POST /kit-lazer/user/:token/watched — Public: mark movie watched + rate
+ *
  * Deploy: `npx wrangler deploy`
- * Secrets needed: ANTHROPIC_API_KEY (for /query only)
- * KV namespace: PREFS (for personalization — optional)
+ * Secrets needed: ANTHROPIC_API_KEY, KIT_LAZER_SYNC_KEY
+ * KV namespace: PREFS
  */
 
 // ---------------------------------------------------------------------------
@@ -381,6 +389,318 @@ async function handleTrackRead(token, request, env) {
 }
 
 // ---------------------------------------------------------------------------
+// Kit Lazer Picks — Movie recommendation database
+// ---------------------------------------------------------------------------
+
+const KIT_LAZER_RECOMMEND_PROMPT = `You are a movie recommendation assistant powered by Kit Lazer's (@moviesaretherapy) complete review catalog.
+
+You have access to Kit Lazer's FULL database of rated and reviewed films. Use this to:
+- Recommend movies based on the user's mood, preferences, or situation
+- Compare the user's taste profile with Kit Lazer's ratings
+- Explain WHY Kit Lazer loved or disliked specific films
+- Suggest deep cuts and hidden gems from his catalog
+
+When recommending, always include:
+- The film title and year
+- Kit Lazer's rating (X/5 stars)
+- A brief explanation of why it fits what they're looking for
+- Where to watch it (if known)
+
+Be conversational and enthusiastic about film. Channel Kit Lazer's passion for cinema.
+If the user has a taste profile, factor in their agreement/disagreement patterns with Kit Lazer.
+Keep responses concise — 2-4 movie recommendations per response unless asked for more.`;
+
+async function handleKitLazerSync(request, env) {
+  // Verify admin secret
+  const authHeader = request.headers.get("Authorization");
+  if (!env.KIT_LAZER_SYNC_KEY || authHeader !== `Bearer ${env.KIT_LAZER_SYNC_KEY}`) {
+    return { error: "Unauthorized" };
+  }
+  if (!env.PREFS) return { error: "KV not bound" };
+
+  let body;
+  try { body = await request.json(); } catch (e) { return { error: "Invalid JSON" }; }
+
+  const newMovies = body.movies || [];
+  if (!newMovies.length) return { error: "No movies provided" };
+
+  // Load existing catalog
+  const existing = await env.PREFS.get("catalog:movies", { type: "json" }) || [];
+
+  // Build indexes for dedup
+  const tmdbIndex = {};
+  const titleIndex = {};
+  existing.forEach((m, i) => {
+    if (m.tmdb_id) tmdbIndex[m.tmdb_id] = i;
+    titleIndex[`${(m.title || "").toLowerCase().trim()}|${m.year}`] = i;
+  });
+
+  let added = 0, updated = 0;
+
+  for (const movie of newMovies) {
+    // Check TMDB ID first, then title+year
+    let existingIdx = (movie.tmdb_id && movie.tmdb_id > 0) ? tmdbIndex[movie.tmdb_id] : undefined;
+    if (existingIdx === undefined) {
+      const key = `${(movie.title || "").toLowerCase().trim()}|${movie.year}`;
+      existingIdx = titleIndex[key];
+    }
+
+    if (existingIdx !== undefined) {
+      // Merge: update if newer data
+      const ex = existing[existingIdx];
+      if (movie.kit_rating && (!ex.kit_rating || movie.kit_watched_date > (ex.kit_watched_date || ""))) {
+        ex.kit_rating = movie.kit_rating;
+        if (movie.kit_review) ex.kit_review = movie.kit_review;
+        ex.kit_rewatch = true;
+      }
+      if (movie.poster_url && !ex.poster_url) ex.poster_url = movie.poster_url;
+      if (movie.tmdb_id && !ex.tmdb_id) ex.tmdb_id = movie.tmdb_id;
+      if (movie.genre && !ex.genre) ex.genre = movie.genre;
+      if (movie.moods && movie.moods.length && (!ex.moods || !ex.moods.length)) ex.moods = movie.moods;
+      if (movie.availability && !ex.availability) ex.availability = movie.availability;
+      // Merge sources
+      const existingUrls = new Set((ex.sources || []).map(s => s.url));
+      for (const src of (movie.sources || [])) {
+        if (src.url && !existingUrls.has(src.url)) {
+          ex.sources = ex.sources || [];
+          ex.sources.push(src);
+        }
+      }
+      ex.last_updated = new Date().toISOString().slice(0, 10);
+      updated++;
+    } else {
+      // New entry
+      movie.id = existing.length;
+      movie.added_date = movie.added_date || new Date().toISOString().slice(0, 10);
+      movie.last_updated = new Date().toISOString().slice(0, 10);
+      existing.push(movie);
+      // Update indexes
+      if (movie.tmdb_id) tmdbIndex[movie.tmdb_id] = movie.id;
+      titleIndex[`${(movie.title || "").toLowerCase().trim()}|${movie.year}`] = movie.id;
+      added++;
+    }
+  }
+
+  // Reassign IDs
+  existing.forEach((m, i) => { m.id = i; });
+
+  // Save catalog
+  await env.PREFS.put("catalog:movies", JSON.stringify(existing));
+
+  // Rebuild mood index
+  const moodIndex = {};
+  existing.forEach((m, i) => {
+    for (const mood of (m.moods || [])) {
+      if (!moodIndex[mood]) moodIndex[mood] = [];
+      moodIndex[mood].push(i);
+    }
+  });
+  await env.PREFS.put("index:moods", JSON.stringify(moodIndex));
+
+  // Update metadata
+  await env.PREFS.put("catalog:meta", JSON.stringify({
+    last_updated: new Date().toISOString(),
+    total_count: existing.length,
+    last_sync: { added, updated },
+  }));
+
+  return { ok: true, added, updated, total: existing.length };
+}
+
+async function handleKitLazerCatalog(env) {
+  if (!env.PREFS) return { error: "KV not bound" };
+  const catalog = await env.PREFS.get("catalog:movies", { type: "json" });
+  return catalog || [];
+}
+
+async function handleKitLazerMoods(env) {
+  if (!env.PREFS) return { error: "KV not bound" };
+  const moods = await env.PREFS.get("index:moods", { type: "json" });
+  return moods || {};
+}
+
+async function handleKitLazerGetUser(token, env) {
+  if (!env.PREFS) return { error: "KV not bound" };
+  const profile = await env.PREFS.get(`kl-user:${token}`, { type: "json" });
+  return profile || {
+    watched: [],
+    taste_profile: { genre_affinity: {}, mood_affinity: {}, avg_rating_delta: 0, overlap_score: 0 },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function handleKitLazerMarkWatched(token, request, env) {
+  if (!env.PREFS) return { error: "KV not bound" };
+
+  let body;
+  try { body = await request.json(); } catch (e) { return { error: "Invalid JSON" }; }
+
+  const { movie_id, personal_rating } = body;
+  if (movie_id === undefined) return { error: "Missing movie_id" };
+
+  const profile = await env.PREFS.get(`kl-user:${token}`, { type: "json" }) || {
+    watched: [],
+    taste_profile: { genre_affinity: {}, mood_affinity: {}, avg_rating_delta: 0, overlap_score: 0 },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  // Check if already watched — update rating if so
+  const existingIdx = profile.watched.findIndex(w => w.movie_id === movie_id);
+  if (existingIdx >= 0) {
+    if (personal_rating !== undefined) profile.watched[existingIdx].personal_rating = personal_rating;
+    profile.watched[existingIdx].watched_date = new Date().toISOString().slice(0, 10);
+  } else {
+    profile.watched.push({
+      movie_id,
+      personal_rating: personal_rating || 0,
+      watched_date: new Date().toISOString().slice(0, 10),
+    });
+  }
+
+  // Recalculate taste profile
+  const catalog = await env.PREFS.get("catalog:movies", { type: "json" }) || [];
+  profile.taste_profile = recalculateTaste(profile.watched, catalog);
+  profile.updated_at = new Date().toISOString();
+
+  await env.PREFS.put(`kl-user:${token}`, JSON.stringify(profile));
+  return { ok: true, taste_profile: profile.taste_profile, watched_count: profile.watched.length };
+}
+
+function recalculateTaste(watched, catalog) {
+  let totalDelta = 0;
+  let ratedCount = 0;
+  const genreCounts = {};
+  const moodCounts = {};
+
+  for (const w of watched) {
+    const movie = catalog[w.movie_id];
+    if (!movie) continue;
+
+    if (w.personal_rating && movie.kit_rating) {
+      totalDelta += (w.personal_rating - movie.kit_rating);
+      ratedCount++;
+    }
+
+    if (movie.genre) {
+      genreCounts[movie.genre] = (genreCounts[movie.genre] || 0) + (w.personal_rating || 3);
+    }
+    for (const mood of (movie.moods || [])) {
+      moodCounts[mood] = (moodCounts[mood] || 0) + (w.personal_rating || 3);
+    }
+  }
+
+  const avgDelta = ratedCount > 0 ? Math.round((totalDelta / ratedCount) * 100) / 100 : 0;
+
+  // Normalize genre affinity
+  const avgGenre = Object.values(genreCounts).length > 0
+    ? Object.values(genreCounts).reduce((a, b) => a + b, 0) / Object.keys(genreCounts).length
+    : 1;
+  const genreAffinity = {};
+  for (const [genre, score] of Object.entries(genreCounts)) {
+    genreAffinity[genre] = Math.round((score / avgGenre) * 100) / 100;
+  }
+
+  // Overlap score: 1.0 = perfect agreement, 0.0 = total disagreement
+  let avgAbsDelta = 0;
+  if (ratedCount > 0) {
+    avgAbsDelta = watched.reduce((sum, w) => {
+      const m = catalog[w.movie_id];
+      return sum + (m && w.personal_rating && m.kit_rating ? Math.abs(w.personal_rating - m.kit_rating) : 0);
+    }, 0) / ratedCount;
+  }
+  const overlapScore = Math.max(0, Math.round((1 - avgAbsDelta / 5) * 100) / 100);
+
+  return {
+    genre_affinity: genreAffinity,
+    mood_affinity: moodCounts,
+    avg_rating_delta: avgDelta,
+    overlap_score: overlapScore,
+  };
+}
+
+async function handleKitLazerRecommend(request, env) {
+  const apiKey = env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { error: "ANTHROPIC_API_KEY not configured" };
+  if (!env.PREFS) return { error: "KV not bound" };
+
+  let body;
+  try { body = await request.json(); } catch (e) { return { error: "Invalid JSON" }; }
+
+  const { question, conversation, token } = body;
+  if (!question) return { error: "Missing question" };
+
+  // Load catalog
+  const catalog = await env.PREFS.get("catalog:movies", { type: "json" }) || [];
+
+  // Load user profile
+  let userContext = "";
+  if (token) {
+    const profile = await env.PREFS.get(`kl-user:${token}`, { type: "json" });
+    if (profile && profile.taste_profile) {
+      const tp = profile.taste_profile;
+      const watchedTitles = profile.watched.slice(0, 15).map(w => {
+        const m = catalog[w.movie_id];
+        return m ? `${m.title} (you: ${w.personal_rating}/5, Kit: ${m.kit_rating}/5)` : null;
+      }).filter(Boolean).join(", ");
+
+      userContext = `\n\nUSER TASTE PROFILE:
+Overlap with Kit Lazer: ${Math.round(tp.overlap_score * 100)}%
+Avg rating difference: ${tp.avg_rating_delta > 0 ? "+" : ""}${tp.avg_rating_delta} (positive = user rates higher)
+Top genres: ${Object.entries(tp.genre_affinity).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, s]) => `${g}(${s})`).join(", ")}
+Recently watched: ${watchedTitles || "none yet"}`;
+    }
+  }
+
+  // Build catalog summary (limit to keep context manageable)
+  const sortedCatalog = [...catalog].sort((a, b) => (b.kit_rating || 0) - (a.kit_rating || 0));
+  const catalogSummary = sortedCatalog.slice(0, 300).map(m =>
+    `[${m.id}] ${m.title} (${m.year}) - ${m.kit_rating || "?"}/5 - ${m.genre || "?"} - ${(m.moods || []).join(",")} - ${m.availability || "?"}`
+  ).join("\n");
+
+  // Build messages
+  const messages = [];
+  if (conversation && Array.isArray(conversation)) {
+    for (const turn of conversation) {
+      messages.push({ role: turn.role, content: turn.content });
+    }
+  }
+
+  const userMsg = messages.length === 0
+    ? `KIT LAZER'S CATALOG (${catalog.length} films, top 300 shown):\n${catalogSummary}${userContext}\n\nUser's question: ${question}`
+    : question;
+  messages.push({ role: "user", content: userMsg });
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1500,
+        system: KIT_LAZER_RECOMMEND_PROMPT,
+        messages,
+      }),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      return { error: `Claude API returned ${resp.status}` };
+    }
+
+    const data = await resp.json();
+    return { reply: data.content?.[0]?.text || "No response received." };
+  } catch (e) {
+    return { error: `Failed to reach Claude API: ${e.message}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -389,7 +709,7 @@ export default {
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     };
 
     if (request.method === "OPTIONS") {
@@ -442,8 +762,66 @@ export default {
       });
     }
 
+    // ---- Kit Lazer Picks API ----
+
+    // POST /kit-lazer/sync — Admin: push movies
+    if (request.method === "POST" && (path === "/kit-lazer/sync" || path === "/kit-lazer/sync/")) {
+      const result = await handleKitLazerSync(request, env);
+      const status = result.error ? (result.error === "Unauthorized" ? 401 : 500) : 200;
+      return new Response(JSON.stringify(result), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // GET /kit-lazer/catalog — Full catalog
+    if (request.method === "GET" && (path === "/kit-lazer/catalog" || path === "/kit-lazer/catalog/")) {
+      const result = await handleKitLazerCatalog(env);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=300" },
+      });
+    }
+
+    // GET /kit-lazer/moods — Mood index
+    if (request.method === "GET" && (path === "/kit-lazer/moods" || path === "/kit-lazer/moods/")) {
+      const result = await handleKitLazerMoods(env);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "public, max-age=300" },
+      });
+    }
+
+    // POST /kit-lazer/recommend — AI recommendations
+    if (request.method === "POST" && (path === "/kit-lazer/recommend" || path === "/kit-lazer/recommend/")) {
+      const result = await handleKitLazerRecommend(request, env);
+      const status = result.error ? 500 : 200;
+      return new Response(JSON.stringify(result), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // GET /kit-lazer/user/:token — User profile
+    const klUserGetMatch = path.match(/^\/kit-lazer\/user\/([a-zA-Z0-9_-]+)\/?$/);
+    if (request.method === "GET" && klUserGetMatch) {
+      const result = await handleKitLazerGetUser(klUserGetMatch[1], env);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // POST /kit-lazer/user/:token/watched — Mark watched + rate
+    const klWatchedMatch = path.match(/^\/kit-lazer\/user\/([a-zA-Z0-9_-]+)\/watched\/?$/);
+    if (request.method === "POST" && klWatchedMatch) {
+      const result = await handleKitLazerMarkWatched(klWatchedMatch[1], request, env);
+      const status = result.error ? 500 : 200;
+      return new Response(JSON.stringify(result), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ---- GET / — Wire Room (live feeds) ----
-    if (request.method === "GET") {
+    if (request.method === "GET" && (path === "/" || path === "")) {
       const category = url.searchParams.get("category") || "all";
       const limit = Math.min(parseInt(url.searchParams.get("limit") || "25"), 50);
 

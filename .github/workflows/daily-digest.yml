@@ -42,6 +42,8 @@ jobs:
           RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
           DIGEST_EMAIL: ${{ secrets.DIGEST_EMAIL }}
           OUTPUT_PATH: "docs/index.html"
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          KIT_LAZER_SYNC_KEY: ${{ secrets.KIT_LAZER_SYNC_KEY }}
         run: python generate_digest.py
 
       - name: Copy static assets

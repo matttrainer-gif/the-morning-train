@@ -765,6 +765,95 @@ def generate_html(analysis: dict, output_path: str):
 
 
 # ---------------------------------------------------------------------------
+# Kit Lazer — Daily Sync & Page Generation
+# ---------------------------------------------------------------------------
+
+def sync_kit_lazer_to_kv(analysis: dict):
+    """Extract Kit Lazer picks from analysis and push to Worker KV catalog."""
+    worker_url = os.environ.get("WORKER_URL", "https://morning-train.matttrainer.workers.dev")
+    sync_key = os.environ.get("KIT_LAZER_SYNC_KEY", "")
+
+    if not sync_key:
+        print("[INFO] KIT_LAZER_SYNC_KEY not set — skipping Kit Lazer sync")
+        return
+
+    kit_analysis = analysis.get("Kit Lazer Picks", {})
+    stories = kit_analysis.get("stories", [])
+    if not stories:
+        print("[INFO] No Kit Lazer stories to sync")
+        return
+
+    movies = []
+    for story in stories:
+        title = story.get("headline", "").strip()
+        if not title:
+            continue
+
+        # Build movie entry for KV catalog
+        movie = {
+            "tmdb_id": 0,
+            "title": title,
+            "year": story.get("year", 0),
+            "genre": story.get("genre", ""),
+            "moods": [],
+            "kit_rating": story.get("rating", 0),
+            "kit_review": story.get("analysis", "")[:500],
+            "kit_liked": story.get("rating", 0) >= 4.0,
+            "kit_rewatch": False,
+            "kit_watched_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "availability": story.get("availability", ""),
+            "poster_url": story.get("image_url", ""),
+            "letterboxd_url": "",
+            "sources": [{"type": s.get("name", ""), "url": s.get("url", "")} for s in story.get("sources", [])],
+        }
+
+        # Extract letterboxd URL from sources
+        for src in story.get("sources", []):
+            if "letterboxd" in src.get("url", "").lower():
+                movie["letterboxd_url"] = src["url"]
+                break
+
+        movies.append(movie)
+
+    if not movies:
+        return
+
+    print(f"Syncing {len(movies)} Kit Lazer picks to Worker KV...")
+    try:
+        resp = requests.post(
+            f"{worker_url}/kit-lazer/sync",
+            json={"movies": movies},
+            headers={
+                "Authorization": f"Bearer {sync_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            print(f"  Kit Lazer sync: added={data.get('added', 0)}, updated={data.get('updated', 0)}")
+        else:
+            print(f"  [WARN] Kit Lazer sync failed: HTTP {resp.status_code}", file=sys.stderr)
+    except Exception as e:
+        print(f"  [WARN] Kit Lazer sync error: {e}", file=sys.stderr)
+
+
+def generate_kit_lazer_page(docs_dir: str):
+    """Copy the Kit Lazer standalone page to docs/kit-lazer/."""
+    template_path = Path(__file__).parent / "templates" / "kit-lazer.html"
+    if not template_path.exists():
+        print("[WARN] templates/kit-lazer.html not found — skipping Kit Lazer page")
+        return
+
+    output_dir = Path(docs_dir) / "kit-lazer"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "index.html"
+
+    shutil.copy2(template_path, output_path)
+    print(f"Kit Lazer page written to {output_path}")
+
+
+# ---------------------------------------------------------------------------
 # Archive System
 # ---------------------------------------------------------------------------
 
@@ -1012,10 +1101,16 @@ def main():
     # 3. Generate HTML
     generate_html(analysis, output_path)
 
-    # 4. Archive today's digest
+    # 4. Sync Kit Lazer picks to Worker KV
+    sync_kit_lazer_to_kv(analysis)
+
+    # 5. Generate Kit Lazer standalone page
+    generate_kit_lazer_page(docs_dir)
+
+    # 6. Archive today's digest
     archive_digest(output_path, docs_dir)
 
-    # 5. Send email
+    # 7. Send email
     if to_email:
         now = datetime.now(timezone.utc)
         subject = f"The Morning Train — {now.strftime('%b %d, %Y')}"

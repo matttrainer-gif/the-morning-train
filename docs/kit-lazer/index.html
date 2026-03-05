@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kit Lazer Picks — The Morning Train</title>
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+
+<meta name="description" content="Kit Lazer's complete movie recommendation database. Mood matching, personal ratings, and AI-powered picks from @moviesaretherapy.">
+<meta property="og:title" content="Kit Lazer Picks — The Morning Train">
+<meta property="og:description" content="A personal movie recommendation engine built on Kit Lazer's reviews. Filter by mood, genre, and rating.">
+<meta property="og:image" content="https://matttrainer-gif.github.io/the-morning-train/assets/hero-train.jpg">
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Oswald:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #1a1510;
+    --bg-warm: #1e1914;
+    --surface: #252019;
+    --surface-2: #2e2820;
+    --surface-3: #3a3228;
+    --border: #4a3f32;
+    --border-light: #5c4f3e;
+    --text: #e8dcc8;
+    --text-muted: #a89880;
+    --text-dim: #7a6d5c;
+    --gold: #c9a84c;
+    --gold-bright: #ddb94e;
+    --gold-dim: #8a7535;
+    --gold-dark: #6b5a28;
+    --cream: #f0e6d0;
+    --positive: #7ab87a;
+    --negative: #c47474;
+    --kl-red: #c44040;
+    --kl-red-dim: #8a2e2e;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'Source Serif 4', Georgia, serif;
+    --font-label: 'Oswald', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+
+  /* ===== HEADER ===== */
+  .kl-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--kl-red);
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    position: relative;
+  }
+  .kl-header::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 5%, var(--kl-red-dim) 20%, var(--kl-red) 50%, var(--kl-red-dim) 80%, transparent 95%);
+  }
+  .kl-header .back-link {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    text-decoration: none;
+    border: 1px solid var(--gold-dark);
+    padding: 0.25rem 0.6rem;
+    border-radius: 2px;
+  }
+  .kl-header .back-link:hover { background: var(--gold-dark); color: var(--cream); }
+  .kl-header .kl-subtitle {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--kl-red);
+    font-weight: 400;
+  }
+  .kl-header h1 {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--cream);
+    margin: 0.1rem 0;
+  }
+  .kl-header .kl-tagline {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  /* ===== STATS BAR ===== */
+  .kl-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.6rem 1rem;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .kl-stats .stat-val { color: var(--gold); font-weight: 500; }
+
+  /* ===== MOOD MATCHER ===== */
+  .kl-mood-section {
+    max-width: 900px;
+    margin: 1.5rem auto 0;
+    padding: 0 1rem;
+  }
+  .kl-mood-label {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--kl-red);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+  .kl-mood-pills {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .kl-mood-pill {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-mood-pill:hover { border-color: var(--kl-red); color: var(--cream); }
+  .kl-mood-pill.active {
+    background: rgba(196,64,64,0.2);
+    border-color: var(--kl-red);
+    color: #e8c0c0;
+  }
+
+  /* ===== FILTER BAR ===== */
+  .kl-filter-bar {
+    max-width: 900px;
+    margin: 1rem auto;
+    padding: 0.6rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .kl-filter-bar select, .kl-filter-bar input[type="text"] {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-filter-bar input[type="text"] {
+    flex: 1;
+    min-width: 120px;
+    font-family: var(--font-body);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.8rem;
+  }
+  .kl-filter-bar input[type="text"]::placeholder { color: var(--text-dim); font-style: italic; }
+  .kl-filter-bar input[type="text"]:focus { border-color: var(--kl-red); outline: none; }
+  .kl-avail-tabs {
+    display: flex;
+    gap: 0.2rem;
+  }
+  .kl-avail-tab {
+    font-family: var(--font-label);
+    font-size: 0.58rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-avail-tab:hover { border-color: var(--kl-red); color: var(--cream); }
+  .kl-avail-tab.active { background: var(--kl-red); border-color: var(--kl-red); color: var(--cream); }
+
+  .kl-filter-count {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-left: auto;
+  }
+
+  /* ===== MOVIE GRID ===== */
+  .kl-grid-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+  }
+  .kl-movie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .kl-movie-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  }
+
+  /* Movie card */
+  .kl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+    cursor: pointer;
+    position: relative;
+  }
+  .kl-card:hover {
+    border-color: var(--kl-red);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+  }
+  .kl-card.kl-hidden { display: none; }
+
+  .kl-card-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    display: block;
+    background: var(--surface-2);
+  }
+  .kl-card-poster-placeholder {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--text-dim);
+  }
+
+  /* Watched overlay */
+  .kl-card.watched .kl-watched-badge {
+    display: flex;
+  }
+  .kl-watched-badge {
+    display: none;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--positive);
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+
+  .kl-card-info {
+    padding: 0.5rem 0.6rem 0.6rem;
+  }
+  .kl-card-title {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--cream);
+    line-height: 1.25;
+    margin-bottom: 0.15rem;
+  }
+  .kl-card-meta {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+  }
+  .kl-card-year {
+    font-family: var(--font-label);
+    font-size: 0.52rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-card-genre {
+    font-family: var(--font-label);
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid var(--border);
+    border-radius: 1px;
+  }
+  .kl-card-rating {
+    color: var(--gold);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+  }
+  .kl-card-avail {
+    font-family: var(--font-label);
+    font-size: 0.48rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.3rem;
+    border-radius: 1px;
+  }
+  .kl-card-avail-streaming { background: rgba(122,184,122,0.15); color: var(--positive); }
+  .kl-card-avail-in_theaters { background: rgba(201,168,76,0.15); color: var(--gold); }
+  .kl-card-avail-classic { background: rgba(168,152,128,0.15); color: var(--text-muted); }
+  .kl-card-avail-coming_soon { background: rgba(155,125,201,0.15); color: #9b7dc9; }
+
+  /* Card action buttons */
+  .kl-card-actions {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+    border-top: 1px solid var(--border);
+  }
+  .kl-card-btn {
+    font-family: var(--font-label);
+    font-size: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.4rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+  }
+  .kl-card-btn:hover { border-color: var(--kl-red); color: var(--cream); }
+  .kl-card-btn.watched-active { background: rgba(122,184,122,0.15); border-color: var(--positive); color: var(--positive); }
+
+  /* ===== MOVIE DETAIL MODAL ===== */
+  .kl-detail-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(10,8,5,0.8);
+    backdrop-filter: blur(6px);
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+  .kl-detail-overlay.open { display: flex; }
+
+  .kl-detail-modal {
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 100%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  .kl-detail-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .kl-detail-close:hover { color: var(--cream); }
+  .kl-detail-top {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    position: relative;
+  }
+  .kl-detail-poster {
+    width: 120px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .kl-detail-info { flex: 1; }
+  .kl-detail-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1.2;
+    margin-bottom: 0.3rem;
+  }
+  .kl-detail-meta {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.4rem;
+  }
+  .kl-detail-stars {
+    color: var(--gold);
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    margin-bottom: 0.4rem;
+  }
+  .kl-detail-review {
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0 1rem 1rem;
+    border-top: 1px solid var(--border);
+    margin-top: 0;
+    padding-top: 0.75rem;
+  }
+  .kl-detail-review:empty { display: none; }
+  .kl-detail-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .kl-detail-action-btn {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.4rem 0.8rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+    text-align: center;
+  }
+  .kl-rate-btn {
+    background: none;
+    border: 1px solid var(--gold-dark);
+    color: var(--gold);
+  }
+  .kl-rate-btn:hover { background: var(--gold-dark); color: var(--cream); }
+  .kl-watched-btn {
+    background: none;
+    border: 1px solid var(--positive);
+    color: var(--positive);
+  }
+  .kl-watched-btn:hover { background: rgba(122,184,122,0.2); }
+  .kl-watched-btn.active { background: var(--positive); color: #fff; }
+
+  /* Rating selector */
+  .kl-rating-selector {
+    display: none;
+    padding: 0.5rem 1rem 0.75rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  .kl-rating-selector.open { display: block; }
+  .kl-rating-selector-label {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 0.4rem;
+  }
+  .kl-rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
+  }
+  .kl-rating-star {
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: var(--border);
+    transition: color 0.1s;
+  }
+  .kl-rating-star:hover, .kl-rating-star.active { color: var(--gold); }
+
+  /* ===== TASTE PROFILE ===== */
+  .kl-taste-section {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+  .kl-taste-header {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--kl-red);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+  }
+  .kl-taste-header .toggle { font-size: 0.5rem; color: var(--gold); }
+  .kl-taste-body {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1rem;
+  }
+  .kl-taste-body.open { display: block; }
+  .kl-taste-overlap {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 0.2rem;
+  }
+  .kl-taste-overlap-label {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  .kl-taste-genres {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .kl-taste-genre {
+    font-family: var(--font-label);
+    font-size: 0.55rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .kl-taste-empty {
+    text-align: center;
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.85rem;
+    padding: 1rem;
+  }
+
+  /* ===== ASK KIT CHAT ===== */
+  .kl-chat-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--kl-red);
+    border: 2px solid var(--cream);
+    color: var(--cream);
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+  }
+  .kl-chat-fab:hover { transform: scale(1.08); }
+
+  .kl-chat-panel {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 420px;
+    max-width: 100vw;
+    height: 60vh;
+    max-height: 500px;
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    z-index: 950;
+    flex-direction: column;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+  }
+  .kl-chat-panel.open { display: flex; }
+
+  .kl-chat-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .kl-chat-header h3 {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--cream);
+  }
+  .kl-chat-header .kl-chat-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+
+  .kl-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .kl-chat-msg {
+    max-width: 90%;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    padding: 0.5rem 0.7rem;
+    border-radius: 3px;
+  }
+  .kl-chat-msg.user {
+    align-self: flex-end;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .kl-chat-msg.assistant {
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--kl-red);
+    color: var(--text);
+  }
+  .kl-chat-msg p { margin-bottom: 0.4rem; }
+  .kl-chat-msg p:last-child { margin-bottom: 0; }
+
+  .kl-chat-suggestions {
+    padding: 0.4rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+  }
+  .kl-chat-suggestion {
+    font-family: var(--font-body);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.4rem;
+    border-radius: 2px;
+    cursor: pointer;
+    font-style: italic;
+  }
+  .kl-chat-suggestion:hover { color: var(--kl-red); border-color: var(--kl-red); }
+
+  .kl-chat-input-bar {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.4rem;
+  }
+  .kl-chat-input-bar input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 0.4rem 0.6rem;
+    color: var(--text);
+    outline: none;
+  }
+  .kl-chat-input-bar input::placeholder { color: var(--text-dim); font-style: italic; }
+  .kl-chat-input-bar input:focus { border-color: var(--kl-red); }
+  .kl-chat-input-bar button {
+    font-family: var(--font-label);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--kl-red);
+    color: var(--cream);
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .kl-chat-input-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ===== LOADING ===== */
+  .kl-loading {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .kl-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--kl-red);
+    border-radius: 50%;
+    animation: kl-spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  @keyframes kl-spin { to { transform: rotate(360deg); } }
+
+  /* ===== FOOTER ===== */
+  .kl-footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .kl-footer a { color: var(--gold); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .kl-header h1 { font-size: 1.5rem; }
+    .kl-header .back-link { position: static; transform: none; display: inline-block; margin-bottom: 0.5rem; }
+    .kl-chat-panel { width: 100vw; height: 70vh; }
+    .kl-detail-top { flex-direction: column; align-items: center; text-align: center; }
+    .kl-detail-poster { width: 150px; height: 225px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="kl-header">
+  <a href="../" class="back-link">&larr; Today's Digest</a>
+  <div class="kl-subtitle">The Morning Train &middot; The Critic's Booth</div>
+  <h1>Kit Lazer Picks</h1>
+  <div class="kl-tagline">The complete recommendation database from @moviesaretherapy</div>
+</div>
+
+<!-- STATS -->
+<div class="kl-stats">
+  <span>Films: <span class="stat-val" id="statTotal">--</span></span>
+  <span>Avg Rating: <span class="stat-val" id="statAvgRating">--</span></span>
+  <span>You've Seen: <span class="stat-val" id="statWatched">0</span></span>
+  <span>Overlap: <span class="stat-val" id="statOverlap">--</span></span>
+</div>
+
+<!-- MOOD MATCHER -->
+<div class="kl-mood-section">
+  <div class="kl-mood-label">What are you in the mood for?</div>
+  <div class="kl-mood-pills" id="moodPills">
+    <button class="kl-mood-pill" data-mood="intense">Intense</button>
+    <button class="kl-mood-pill" data-mood="comfort_watch">Comfort Watch</button>
+    <button class="kl-mood-pill" data-mood="mind_bending">Mind-Bending</button>
+    <button class="kl-mood-pill" data-mood="feel_good">Feel Good</button>
+    <button class="kl-mood-pill" data-mood="dark">Dark</button>
+    <button class="kl-mood-pill" data-mood="funny">Funny</button>
+    <button class="kl-mood-pill" data-mood="romantic">Romantic</button>
+    <button class="kl-mood-pill" data-mood="epic">Epic</button>
+    <button class="kl-mood-pill" data-mood="chill">Chill</button>
+    <button class="kl-mood-pill" data-mood="thought_provoking">Thought-Provoking</button>
+    <button class="kl-mood-pill" data-mood="scary">Scary</button>
+    <button class="kl-mood-pill" data-mood="tearjerker">Tearjerker</button>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="kl-filter-bar">
+  <div class="kl-avail-tabs" id="availTabs">
+    <button class="kl-avail-tab active" data-avail="all">All</button>
+    <button class="kl-avail-tab" data-avail="streaming">Streaming</button>
+    <button class="kl-avail-tab" data-avail="in_theaters">In Theaters</button>
+    <button class="kl-avail-tab" data-avail="classic">Classics</button>
+  </div>
+  <select id="yearFilter">
+    <option value="all">All Years</option>
+    <option value="2026">2026</option>
+    <option value="2025">2025</option>
+    <option value="2024">2024</option>
+    <option value="2023">2023</option>
+    <option value="older">Older</option>
+  </select>
+  <select id="ratingFilter">
+    <option value="0">All Ratings</option>
+    <option value="4.5">4.5+ Stars</option>
+    <option value="4">4+ Stars</option>
+    <option value="3.5">3.5+ Stars</option>
+    <option value="3">3+ Stars</option>
+  </select>
+  <select id="sortFilter">
+    <option value="rating">Sort: Rating</option>
+    <option value="date">Sort: Date Watched</option>
+    <option value="year">Sort: Release Year</option>
+    <option value="title">Sort: Title</option>
+  </select>
+  <input type="text" id="searchInput" placeholder="Search titles...">
+  <span class="kl-filter-count" id="filterCount"></span>
+</div>
+
+<!-- MOVIE GRID -->
+<div class="kl-grid-container">
+  <div class="kl-loading" id="gridLoading">
+    <div class="kl-spinner"></div>
+    Loading Kit Lazer's catalog...
+  </div>
+  <div class="kl-movie-grid" id="movieGrid"></div>
+</div>
+
+<!-- TASTE PROFILE -->
+<div class="kl-taste-section">
+  <div class="kl-taste-header" onclick="document.getElementById('tasteBody').classList.toggle('open'); this.querySelector('.toggle').textContent = document.getElementById('tasteBody').classList.contains('open') ? '\u25BC' : '\u25B6';">
+    <span class="toggle">&#9654;</span> Your Taste Profile
+  </div>
+  <div class="kl-taste-body" id="tasteBody">
+    <div id="tasteContent">
+      <div class="kl-taste-empty">Mark some movies as watched and rate them to build your taste profile.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MOVIE DETAIL MODAL -->
+<div class="kl-detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetail()">
+  <div class="kl-detail-modal">
+    <button class="kl-detail-close" onclick="closeDetail()">&times;</button>
+    <div class="kl-detail-top">
+      <img class="kl-detail-poster" id="detailPoster" src="" alt="">
+      <div class="kl-detail-info">
+        <div class="kl-detail-title" id="detailTitle"></div>
+        <div class="kl-detail-meta" id="detailMeta"></div>
+        <div class="kl-detail-stars" id="detailStars"></div>
+        <div id="detailAvail"></div>
+      </div>
+    </div>
+    <div class="kl-detail-review" id="detailReview"></div>
+    <div class="kl-detail-actions">
+      <button class="kl-detail-action-btn kl-watched-btn" id="detailWatchedBtn" onclick="toggleWatched()">Mark as Watched</button>
+      <button class="kl-detail-action-btn kl-rate-btn" onclick="document.getElementById('ratingSelector').classList.toggle('open')">Rate It</button>
+    </div>
+    <div class="kl-rating-selector" id="ratingSelector">
+      <div class="kl-rating-selector-label">Your Rating</div>
+      <div class="kl-rating-stars" id="ratingStars"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ASK KIT CHAT FAB -->
+<button class="kl-chat-fab" id="chatFab" onclick="toggleChat()" title="Ask Kit for recommendations">&#128172;</button>
+
+<!-- CHAT PANEL -->
+<div class="kl-chat-panel" id="chatPanel">
+  <div class="kl-chat-header">
+    <h3>&#127909; Ask Kit</h3>
+    <button class="kl-chat-close" onclick="toggleChat()">&times;</button>
+  </div>
+  <div class="kl-chat-suggestions" id="chatSuggestions">
+    <button class="kl-chat-suggestion" onclick="askChat(this.textContent)">What should I watch tonight?</button>
+    <button class="kl-chat-suggestion" onclick="askChat(this.textContent)">Best comfort movies?</button>
+    <button class="kl-chat-suggestion" onclick="askChat(this.textContent)">Hidden gems I'm missing?</button>
+    <button class="kl-chat-suggestion" onclick="askChat(this.textContent)">Something mind-bending</button>
+  </div>
+  <div class="kl-chat-messages" id="chatMessages"></div>
+  <div class="kl-chat-input-bar">
+    <input type="text" id="chatInput" placeholder="Ask for a recommendation..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button id="chatSendBtn" onclick="sendChat()">Send</button>
+  </div>
+</div>
+
+<footer class="kl-footer">
+  <a href="../">The Morning Train</a> &middot; Kit Lazer Picks &middot; Data from <a href="https://letterboxd.com/moviesrtherapy/" target="_blank" rel="noopener">@moviesaretherapy</a>
+</footer>
+
+<script>
+(function() {
+  const WORKER_URL = "https://morning-train.matttrainer.workers.dev";
+
+  // User identity
+  let userToken = localStorage.getItem("kit_lazer_token");
+  if (!userToken) {
+    userToken = crypto.randomUUID();
+    localStorage.setItem("kit_lazer_token", userToken);
+  }
+
+  let catalog = [];
+  let userProfile = { watched: [], taste_profile: {} };
+  let watchedSet = new Set();
+  let currentDetailMovie = null;
+  let chatHistory = [];
+  let chatQuerying = false;
+
+  // Filters
+  let filters = { avail: "all", year: "all", rating: 0, sort: "rating", search: "", moods: new Set() };
+
+  // ---- INIT ----
+  async function init() {
+    try {
+      const [catResp, userResp] = await Promise.all([
+        fetch(WORKER_URL + "/kit-lazer/catalog"),
+        fetch(WORKER_URL + "/kit-lazer/user/" + userToken),
+      ]);
+      catalog = await catResp.json();
+      if (Array.isArray(catalog)) {
+        // good
+      } else {
+        catalog = [];
+      }
+      userProfile = await userResp.json();
+      watchedSet = new Set((userProfile.watched || []).map(w => w.movie_id));
+    } catch (e) {
+      console.error("Init failed:", e);
+      catalog = [];
+    }
+
+    document.getElementById("gridLoading").style.display = "none";
+    updateStats();
+    renderGrid();
+    renderTaste();
+  }
+
+  function updateStats() {
+    document.getElementById("statTotal").textContent = catalog.length;
+    const rated = catalog.filter(m => m.kit_rating > 0);
+    const avg = rated.length > 0 ? (rated.reduce((s, m) => s + m.kit_rating, 0) / rated.length).toFixed(1) : "--";
+    document.getElementById("statAvgRating").textContent = avg;
+    document.getElementById("statWatched").textContent = watchedSet.size;
+    const tp = userProfile.taste_profile || {};
+    document.getElementById("statOverlap").textContent = tp.overlap_score !== undefined ? Math.round(tp.overlap_score * 100) + "%" : "--";
+  }
+
+  // ---- STARS ----
+  function renderStars(rating) {
+    if (!rating || rating === 0) return "";
+    let s = "";
+    for (let i = 1; i <= 5; i++) {
+      if (rating >= i) s += "\u2605";
+      else if (rating >= i - 0.5) s += "\u00BD";
+      else s += "\u2606";
+    }
+    return s;
+  }
+
+  // ---- FILTER + SORT ----
+  function getFiltered() {
+    let list = catalog.filter(function(m) {
+      if (filters.avail !== "all" && m.availability !== filters.avail) return false;
+      if (filters.year !== "all") {
+        if (filters.year === "older") { if (m.year >= 2023 || m.year === 0) return false; }
+        else { if (m.year !== parseInt(filters.year)) return false; }
+      }
+      if (m.kit_rating < filters.rating) return false;
+      if (filters.search) {
+        var q = filters.search.toLowerCase();
+        if (!(m.title || "").toLowerCase().includes(q)) return false;
+      }
+      if (filters.moods.size > 0) {
+        var movieMoods = m.moods || [];
+        var hasMatch = false;
+        filters.moods.forEach(function(mood) { if (movieMoods.includes(mood)) hasMatch = true; });
+        if (!hasMatch) return false;
+      }
+      return true;
+    });
+
+    if (filters.sort === "rating") list.sort(function(a, b) { return (b.kit_rating || 0) - (a.kit_rating || 0); });
+    else if (filters.sort === "date") list.sort(function(a, b) { return (b.kit_watched_date || "").localeCompare(a.kit_watched_date || ""); });
+    else if (filters.sort === "year") list.sort(function(a, b) { return (b.year || 0) - (a.year || 0); });
+    else if (filters.sort === "title") list.sort(function(a, b) { return (a.title || "").localeCompare(b.title || ""); });
+
+    return list;
+  }
+
+  // ---- RENDER GRID ----
+  function renderGrid() {
+    var filtered = getFiltered();
+    var grid = document.getElementById("movieGrid");
+    document.getElementById("filterCount").textContent = filtered.length + " of " + catalog.length + " films";
+
+    grid.innerHTML = filtered.map(function(m) {
+      var isWatched = watchedSet.has(m.id);
+      var posterHtml = m.poster_url
+        ? '<img class="kl-card-poster" src="' + esc(m.poster_url) + '" alt="' + esc(m.title) + '" loading="lazy" onerror="this.outerHTML=\'<div class=kl-card-poster-placeholder>\\ud83c\\udfac</div>\'">'
+        : '<div class="kl-card-poster-placeholder">&#127916;</div>';
+
+      var availClass = m.availability ? " kl-card-avail-" + m.availability : "";
+      var availLabel = { streaming: "Streaming", in_theaters: "In Theaters", classic: "Classic", coming_soon: "Coming Soon" }[m.availability] || "";
+
+      return '<div class="kl-card' + (isWatched ? " watched" : "") + '" data-id="' + m.id + '" onclick="openDetail(' + m.id + ')">'
+        + '<div class="kl-watched-badge">&#10003;</div>'
+        + posterHtml
+        + '<div class="kl-card-info">'
+        + '<div class="kl-card-title">' + esc(m.title) + '</div>'
+        + '<div class="kl-card-meta">'
+        + (m.year ? '<span class="kl-card-year">' + m.year + '</span>' : '')
+        + (m.genre ? '<span class="kl-card-genre">' + esc(m.genre) + '</span>' : '')
+        + (availLabel ? '<span class="kl-card-avail' + availClass + '">' + availLabel + '</span>' : '')
+        + '</div>'
+        + '<div class="kl-card-rating">' + renderStars(m.kit_rating) + '</div>'
+        + '</div></div>';
+    }).join("");
+  }
+
+  // ---- DETAIL MODAL ----
+  window.openDetail = function(id) {
+    var m = catalog[id];
+    if (!m) return;
+    currentDetailMovie = m;
+
+    document.getElementById("detailTitle").textContent = m.title;
+    document.getElementById("detailMeta").textContent = [m.year, m.genre, m.availability].filter(Boolean).join(" \u00B7 ");
+    document.getElementById("detailStars").textContent = "Kit's Rating: " + renderStars(m.kit_rating) + (m.kit_rating ? " (" + m.kit_rating + "/5)" : " (unrated)");
+    document.getElementById("detailReview").textContent = m.kit_review || "";
+
+    var poster = document.getElementById("detailPoster");
+    if (m.poster_url) { poster.src = m.poster_url; poster.style.display = "block"; }
+    else { poster.style.display = "none"; }
+
+    var availEl = document.getElementById("detailAvail");
+    if (m.availability) {
+      var cls = "kl-card-avail kl-card-avail-" + m.availability;
+      var lbl = { streaming: "Streaming", in_theaters: "In Theaters", classic: "Classic", coming_soon: "Coming Soon" }[m.availability] || m.availability;
+      availEl.innerHTML = '<span class="' + cls + '">' + lbl + '</span>';
+    } else { availEl.innerHTML = ""; }
+
+    // Watched button state
+    var wBtn = document.getElementById("detailWatchedBtn");
+    if (watchedSet.has(m.id)) {
+      wBtn.classList.add("active");
+      wBtn.textContent = "\u2713 Watched";
+    } else {
+      wBtn.classList.remove("active");
+      wBtn.textContent = "Mark as Watched";
+    }
+
+    // Rating stars
+    var userRating = 0;
+    var watched = (userProfile.watched || []).find(function(w) { return w.movie_id === m.id; });
+    if (watched) userRating = watched.personal_rating || 0;
+
+    var starsEl = document.getElementById("ratingStars");
+    starsEl.innerHTML = "";
+    for (var i = 1; i <= 5; i++) {
+      var star = document.createElement("span");
+      star.className = "kl-rating-star" + (i <= userRating ? " active" : "");
+      star.textContent = i <= userRating ? "\u2605" : "\u2606";
+      star.dataset.val = i;
+      star.onclick = function() { rateMovie(parseInt(this.dataset.val)); };
+      starsEl.appendChild(star);
+    }
+
+    document.getElementById("ratingSelector").classList.remove("open");
+    document.getElementById("detailOverlay").classList.add("open");
+  };
+
+  window.closeDetail = function() {
+    document.getElementById("detailOverlay").classList.remove("open");
+    currentDetailMovie = null;
+  };
+
+  window.toggleWatched = async function() {
+    if (!currentDetailMovie) return;
+    var id = currentDetailMovie.id;
+    var isWatched = watchedSet.has(id);
+
+    if (isWatched) {
+      // Already watched — just close
+      return;
+    }
+
+    try {
+      var resp = await fetch(WORKER_URL + "/kit-lazer/user/" + userToken + "/watched", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movie_id: id, personal_rating: 0 }),
+      });
+      var data = await resp.json();
+      watchedSet.add(id);
+      if (!userProfile.watched) userProfile.watched = [];
+      userProfile.watched.push({ movie_id: id, personal_rating: 0 });
+      if (data.taste_profile) userProfile.taste_profile = data.taste_profile;
+
+      var wBtn = document.getElementById("detailWatchedBtn");
+      wBtn.classList.add("active");
+      wBtn.textContent = "\u2713 Watched";
+
+      updateStats();
+      renderGrid();
+      renderTaste();
+    } catch (e) {
+      console.error("Watch error:", e);
+    }
+  };
+
+  async function rateMovie(rating) {
+    if (!currentDetailMovie) return;
+    var id = currentDetailMovie.id;
+
+    // Update stars UI
+    var stars = document.querySelectorAll("#ratingStars .kl-rating-star");
+    stars.forEach(function(s) {
+      var v = parseInt(s.dataset.val);
+      s.className = "kl-rating-star" + (v <= rating ? " active" : "");
+      s.textContent = v <= rating ? "\u2605" : "\u2606";
+    });
+
+    try {
+      var resp = await fetch(WORKER_URL + "/kit-lazer/user/" + userToken + "/watched", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ movie_id: id, personal_rating: rating }),
+      });
+      var data = await resp.json();
+      watchedSet.add(id);
+
+      // Update local profile
+      var existing = (userProfile.watched || []).find(function(w) { return w.movie_id === id; });
+      if (existing) { existing.personal_rating = rating; }
+      else { userProfile.watched = userProfile.watched || []; userProfile.watched.push({ movie_id: id, personal_rating: rating }); }
+      if (data.taste_profile) userProfile.taste_profile = data.taste_profile;
+
+      var wBtn = document.getElementById("detailWatchedBtn");
+      wBtn.classList.add("active");
+      wBtn.textContent = "\u2713 Watched";
+
+      updateStats();
+      renderGrid();
+      renderTaste();
+    } catch (e) {
+      console.error("Rate error:", e);
+    }
+  }
+
+  // ---- TASTE PROFILE ----
+  function renderTaste() {
+    var tp = userProfile.taste_profile || {};
+    var el = document.getElementById("tasteContent");
+
+    if (!watchedSet.size) {
+      el.innerHTML = '<div class="kl-taste-empty">Mark some movies as watched and rate them to build your taste profile.</div>';
+      return;
+    }
+
+    var overlap = tp.overlap_score !== undefined ? Math.round(tp.overlap_score * 100) : "--";
+    var delta = tp.avg_rating_delta || 0;
+    var deltaText = delta > 0 ? "You tend to rate " + delta.toFixed(1) + " stars higher than Kit Lazer."
+      : delta < 0 ? "You tend to rate " + Math.abs(delta).toFixed(1) + " stars lower than Kit Lazer."
+      : "Your ratings closely match Kit Lazer's.";
+
+    var genres = Object.entries(tp.genre_affinity || {}).sort(function(a, b) { return b[1] - a[1]; });
+    var genreHtml = genres.slice(0, 8).map(function(g) {
+      return '<span class="kl-taste-genre">' + esc(g[0]) + ' (' + g[1].toFixed(1) + ')</span>';
+    }).join("");
+
+    el.innerHTML = '<div class="kl-taste-overlap">' + overlap + '%</div>'
+      + '<div class="kl-taste-overlap-label">Taste overlap with Kit Lazer</div>'
+      + '<div style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-bottom:0.75rem">' + esc(deltaText) + '</div>'
+      + '<div style="text-align:center;margin-bottom:0.5rem"><span style="font-family:var(--font-label);font-size:0.55rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim)">Your Top Genres</span></div>'
+      + '<div class="kl-taste-genres">' + (genreHtml || '<span class="kl-taste-empty">Rate more movies to see genre preferences</span>') + '</div>';
+  }
+
+  // ---- CHAT ----
+  window.toggleChat = function() {
+    var panel = document.getElementById("chatPanel");
+    panel.classList.toggle("open");
+    if (panel.classList.contains("open")) {
+      setTimeout(function() { document.getElementById("chatInput").focus(); }, 200);
+    }
+  };
+
+  window.askChat = function(text) {
+    document.getElementById("chatInput").value = text;
+    sendChat();
+  };
+
+  window.sendChat = async function() {
+    if (chatQuerying) return;
+    var input = document.getElementById("chatInput");
+    var question = input.value.trim();
+    if (!question) return;
+
+    input.value = "";
+    chatQuerying = true;
+    document.getElementById("chatSendBtn").disabled = true;
+
+    var suggestions = document.getElementById("chatSuggestions");
+    if (suggestions) suggestions.style.display = "none";
+
+    var msgs = document.getElementById("chatMessages");
+    msgs.innerHTML += '<div class="kl-chat-msg user">' + esc(question) + '</div>';
+    msgs.innerHTML += '<div class="kl-chat-msg assistant" id="chatTyping" style="color:var(--text-dim);font-style:italic">Thinking...</div>';
+    msgs.scrollTop = msgs.scrollHeight;
+
+    try {
+      var resp = await fetch(WORKER_URL + "/kit-lazer/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: question, token: userToken, conversation: chatHistory }),
+      });
+      var data = await resp.json();
+      var typing = document.getElementById("chatTyping");
+      if (typing) typing.remove();
+
+      if (data.error) {
+        msgs.innerHTML += '<div class="kl-chat-msg assistant" style="color:var(--negative)">' + esc(data.error) + '</div>';
+      } else {
+        chatHistory.push({ role: "user", content: chatHistory.length === 0 ? "User asks: " + question : question });
+        chatHistory.push({ role: "assistant", content: data.reply });
+
+        var formatted = data.reply.split("\n\n").map(function(p) { return "<p>" + esc(p.trim()) + "</p>"; }).join("");
+        msgs.innerHTML += '<div class="kl-chat-msg assistant">' + formatted + '</div>';
+      }
+    } catch (e) {
+      var typing = document.getElementById("chatTyping");
+      if (typing) typing.remove();
+      msgs.innerHTML += '<div class="kl-chat-msg assistant" style="color:var(--negative)">Connection failed: ' + esc(e.message) + '</div>';
+    }
+
+    msgs.scrollTop = msgs.scrollHeight;
+    chatQuerying = false;
+    document.getElementById("chatSendBtn").disabled = false;
+    document.getElementById("chatInput").focus();
+  };
+
+  // ---- EVENT LISTENERS ----
+
+  // Availability tabs
+  document.getElementById("availTabs").addEventListener("click", function(e) {
+    var btn = e.target.closest(".kl-avail-tab");
+    if (!btn) return;
+    document.querySelectorAll(".kl-avail-tab").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    filters.avail = btn.dataset.avail;
+    renderGrid();
+  });
+
+  // Mood pills
+  document.getElementById("moodPills").addEventListener("click", function(e) {
+    var btn = e.target.closest(".kl-mood-pill");
+    if (!btn) return;
+    var mood = btn.dataset.mood;
+    if (filters.moods.has(mood)) {
+      filters.moods.delete(mood);
+      btn.classList.remove("active");
+    } else {
+      filters.moods.add(mood);
+      btn.classList.add("active");
+    }
+    renderGrid();
+  });
+
+  // Year filter
+  document.getElementById("yearFilter").addEventListener("change", function() {
+    filters.year = this.value;
+    renderGrid();
+  });
+
+  // Rating filter
+  document.getElementById("ratingFilter").addEventListener("change", function() {
+    filters.rating = parseFloat(this.value) || 0;
+    renderGrid();
+  });
+
+  // Sort filter
+  document.getElementById("sortFilter").addEventListener("change", function() {
+    filters.sort = this.value;
+    renderGrid();
+  });
+
+  // Search
+  var searchTimeout;
+  document.getElementById("searchInput").addEventListener("input", function() {
+    clearTimeout(searchTimeout);
+    var val = this.value;
+    searchTimeout = setTimeout(function() {
+      filters.search = val;
+      renderGrid();
+    }, 200);
+  });
+
+  // Escape to close modals
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      if (document.getElementById("detailOverlay").classList.contains("open")) closeDetail();
+      else if (document.getElementById("chatPanel").classList.contains("open")) toggleChat();
+    }
+  });
+
+  // ---- HELPERS ----
+  function esc(str) {
+    var d = document.createElement("div");
+    d.textContent = str || "";
+    return d.innerHTML;
+  }
+
+  // ---- GO ----
+  init();
+})();
+</script>
+
+</body>
+</html>
