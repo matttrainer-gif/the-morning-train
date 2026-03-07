@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Morning Train — {{ date_short }}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#0d0b08;font-family:Georgia,'Times New Roman',Times,serif;">
+
+<!-- Wrapper table -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0d0b08;">
+<tr><td align="center" style="padding:20px 10px;">
+
+<!-- Inner container -->
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#1a1510;border:1px solid #8a7535;">
+
+  <!-- Header -->
+  <tr>
+    <td style="background:linear-gradient(135deg,#1a1510 0%,#2a2218 50%,#1a1510 100%);border-bottom:2px solid #8a7535;padding:30px 20px;text-align:center;">
+      <div style="font-size:11px;letter-spacing:6px;color:#8a7535;text-transform:uppercase;margin-bottom:8px;">&#9670; Daily Digest &#9670;</div>
+      <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:700;color:#e8d5a3;letter-spacing:2px;">THE MORNING TRAIN</h1>
+      <div style="font-size:12px;letter-spacing:3px;color:#6b5a2e;text-transform:uppercase;margin-top:8px;">Fact-First News &amp; Centrist Analysis</div>
+      <div style="width:80px;height:1px;background-color:#8a7535;margin:16px auto 0;"></div>
+      <div style="font-size:13px;color:#a08c5a;margin-top:12px;">{{ date_short }}</div>
+    </td>
+  </tr>
+
+  <!-- Intro -->
+  <tr>
+    <td style="padding:20px 24px 10px;text-align:center;">
+      <p style="margin:0;font-size:14px;color:#a08c5a;line-height:1.5;">Today's headlines across {{ category_count }} sections &middot; {{ story_count }} stories analyzed</p>
+    </td>
+  </tr>
+
+  {% for cat in categories %}
+  {% if cat.stories %}
+  <!-- Section: {{ cat.name }} -->
+  <tr>
+    <td style="padding:20px 24px 0;">
+      <!-- Section header -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="border-bottom:1px solid #3a3020;padding-bottom:8px;">
+            <span style="font-size:12px;letter-spacing:4px;color:#8a7535;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;">{{ cat.emoji | safe }}&nbsp; {{ cat.name }}</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  {% for story in cat.stories[:4] %}
+  <tr>
+    <td style="padding:8px 24px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:10px 14px;background-color:#1f1a14;border-left:3px solid {% if story.verification == 'confirmed' %}#4a9e4a{% elif story.verification == 'developing' %}#c49a2a{% elif story.verification == 'disputed' %}#c44a4a{% else %}#6a6a8a{% endif %};">
+            {% if story.verification %}
+            <div style="font-size:10px;letter-spacing:2px;color:{% if story.verification == 'confirmed' %}#4a9e4a{% elif story.verification == 'developing' %}#c49a2a{% elif story.verification == 'disputed' %}#c44a4a{% else %}#6a6a8a{% endif %};text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;margin-bottom:4px;">{{ story.verification }}</div>
+            {% endif %}
+            <a href="{{ site_url }}#{{ cat.anchor }}" style="font-size:16px;color:#e8d5a3;text-decoration:none;font-family:Georgia,'Times New Roman',serif;line-height:1.4;" target="_blank">{{ story.headline }}</a>
+            {% if story.key_facts and story.key_facts | length > 0 %}
+            <div style="font-size:13px;color:#8a7e65;margin-top:6px;line-height:1.4;">&#8226; {{ story.key_facts[0] }}</div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endfor %}
+
+  <!-- Read more link for section -->
+  <tr>
+    <td style="padding:6px 24px 16px;">
+      <a href="{{ site_url }}#{{ cat.anchor }}" style="font-size:12px;color:#8a7535;text-decoration:none;letter-spacing:1px;font-family:Arial,Helvetica,sans-serif;" target="_blank">Read full analysis &#8594;</a>
+    </td>
+  </tr>
+  {% endif %}
+  {% endfor %}
+
+  <!-- Divider -->
+  <tr>
+    <td style="padding:10px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="border-top:1px solid #3a3020;"></td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CTA Button -->
+  <tr>
+    <td style="padding:10px 24px 20px;text-align:center;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+        <tr>
+          <td style="background-color:#8a7535;padding:12px 32px;border-radius:2px;">
+            <a href="{{ site_url }}" style="font-size:14px;color:#1a1510;text-decoration:none;font-weight:bold;letter-spacing:2px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;" target="_blank">Read Full Digest</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Wire Room Teaser -->
+  <tr>
+    <td style="padding:0 24px 20px;text-align:center;">
+      <div style="font-size:12px;color:#6b5a2e;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">&#9670; Live Wire Room &#9670;</div>
+      <p style="margin:0;font-size:13px;color:#8a7e65;line-height:1.4;">Real-time dispatches from AP, Reuters, BBC &amp; more — available on the website.</p>
+      <a href="{{ site_url }}" style="font-size:12px;color:#8a7535;text-decoration:none;letter-spacing:1px;font-family:Arial,Helvetica,sans-serif;" target="_blank">Open Wire Room &#8594;</a>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="background-color:#12100c;border-top:1px solid #3a3020;padding:20px 24px;text-align:center;">
+      <div style="font-size:11px;letter-spacing:3px;color:#6b5a2e;text-transform:uppercase;margin-bottom:8px;">The Morning Train</div>
+      <div style="font-size:12px;color:#5a4e38;line-height:1.5;">All the facts. Every platform. One train.</div>
+      <div style="font-size:11px;color:#3a3020;margin-top:12px;">&copy; {{ year }} The Morning Train. AI-generated digest.</div>
+    </td>
+  </tr>
+
+</table>
+<!-- /Inner container -->
+
+</td></tr>
+</table>
+<!-- /Wrapper -->
+
+</body>
+</html>

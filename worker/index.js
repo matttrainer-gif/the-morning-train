@@ -94,7 +94,7 @@ function parseRSSItems(xmlText, sourceName) {
     if (title) {
       items.push({
         title: stripHTML(title).trim(),
-        link: link || "",
+        link: (link || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"),
         source: sourceName,
         published: pubDate,
         timestamp: pubDate ? new Date(pubDate).getTime() : 0,
@@ -121,7 +121,27 @@ function extractLink(block) {
 }
 
 function stripHTML(str) {
-  return (str || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ");
+  return (str || "")
+    .replace(/<!\[CDATA\[|\]\]>/g, "")       // Strip CDATA wrappers
+    .replace(/<br\s*\/?>/gi, " ")             // <br> → space
+    .replace(/<\/p>\s*<p[^>]*>/gi, " ")       // </p><p> → space
+    .replace(/<[^>]+>/g, "")                  // Strip all HTML tags
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&mdash;/g, "\u2014")
+    .replace(/&ndash;/g, "\u2013")
+    .replace(/&ldquo;|&rdquo;/g, '"')
+    .replace(/&lsquo;|&rsquo;/g, "'")
+    .replace(/&hellip;/g, "\u2026")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // ---------------------------------------------------------------------------

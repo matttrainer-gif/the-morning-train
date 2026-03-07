@@ -1016,6 +1016,14 @@ def _update_archive_index(docs_dir: str):
 # Email Summary
 # ---------------------------------------------------------------------------
 
+def _section_anchor(name: str) -> str:
+    """Generate the same anchor ID used in the web report."""
+    return name.lower().replace(" ", "-").replace("&", "").replace("--", "-")
+
+
+SITE_URL = "https://matttrainer-gif.github.io/the-morning-train/"
+
+
 def generate_email_summary(analysis: dict) -> str:
     """Generate a concise plain-text email summary."""
     now = datetime.now(timezone.utc)
@@ -1027,29 +1035,58 @@ def generate_email_summary(analysis: dict) -> str:
 
     for cat_name in CATEGORIES:
         cat_analysis = analysis.get(cat_name, {})
-        emoji = CATEGORIES[cat_name]["emoji"]
+        stories = cat_analysis.get("stories", [])[:4]
+        if not stories:
+            continue
         lines.append(f"{cat_name.upper()}")
         lines.append("-" * 40)
 
-        summary = cat_analysis.get("section_summary", "")
-        if summary:
-            lines.append(summary)
-            lines.append("")
-
-        for story in cat_analysis.get("stories", [])[:3]:
+        for story in stories:
             verification = story.get("verification", "confirmed").upper()
             lines.append(f"  [{verification}] {story.get('headline', 'Untitled')}")
-            facts = story.get("key_facts", [])[:2]
+            facts = story.get("key_facts", [])[:1]
             for fact in facts:
                 lines.append(f"    - {fact}")
-            sources = story.get("sources", [])
-            if sources:
-                lines.append(f"    Source: {sources[0].get('name', '')} — {sources[0].get('url', '')}")
             lines.append("")
 
+        anchor = _section_anchor(cat_name)
+        lines.append(f"  Read more: {SITE_URL}#{anchor}")
         lines.append("")
 
+    lines.append(f"Full digest: {SITE_URL}")
     return "\n".join(lines)
+
+
+def generate_email_html(analysis: dict) -> str:
+    """Generate a lightweight email-safe HTML digest with headlines + links."""
+    template_dir = Path(__file__).parent / "templates"
+    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    template = env.get_template("email.html")
+
+    now = datetime.now(timezone.utc)
+    categories_data = []
+    total_stories = 0
+    for cat_name, cat_cfg in CATEGORIES.items():
+        cat_analysis = analysis.get(cat_name, {})
+        stories = cat_analysis.get("stories", [])
+        if not stories:
+            continue
+        total_stories += len(stories)
+        categories_data.append({
+            "name": cat_name,
+            "emoji": cat_cfg["emoji"],
+            "anchor": _section_anchor(cat_name),
+            "stories": stories,
+        })
+
+    return template.render(
+        date_short=now.strftime("%B %d, %Y"),
+        year=now.year,
+        site_url=SITE_URL,
+        categories=categories_data,
+        category_count=len(categories_data),
+        story_count=total_stories,
+    )
 
 
 def send_email(subject: str, body_text: str, body_html: str, to_email: str):
@@ -1125,10 +1162,7 @@ def main():
         now = datetime.now(timezone.utc)
         subject = f"The Morning Train — {now.strftime('%b %d, %Y')}"
         text_summary = generate_email_summary(analysis)
-
-        # Read the generated HTML for the email body
-        with open(output_path, "r") as f:
-            html_body = f.read()
+        html_body = generate_email_html(analysis)
 
         send_email(subject, text_summary, html_body, to_email)
     else:
