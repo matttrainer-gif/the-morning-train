@@ -15,3 +15,7 @@ compatibility_date = "2024-01-01"
 [[kv_namespaces]]
 binding = "PREFS"
 id = "8b689547ca824afaaff5ab622e6940cc"
+
+# Cron trigger — fire daily at 14:00 UTC (7 AM PDT) to dispatch GitHub Actions digest
+[triggers]
+crons = ["0 14 * * *"]

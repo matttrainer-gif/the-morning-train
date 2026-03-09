@@ -191,6 +191,37 @@ function dedup(items) {
 }
 
 // ---------------------------------------------------------------------------
+// Cron Failure Alert — email via Resend if digest dispatch fails
+// ---------------------------------------------------------------------------
+
+async function cronAlert(env, message) {
+  const apiKey = env.RESEND_API_KEY;
+  const to = env.DIGEST_EMAIL;
+  const from = env.RESEND_FROM_EMAIL || "digest@resend.dev";
+  if (!apiKey || !to) {
+    console.error(`cronAlert (no email config): ${message}`);
+    return;
+  }
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject: "Morning Train — Cron Alert",
+        text: `The Morning Train daily cron trigger failed.\n\n${message}\n\nCheck: https://github.com/matttrainer-gif/the-morning-train/actions`,
+      }),
+    });
+  } catch (e) {
+    console.error(`cronAlert email failed: ${e.message}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Inquiry Desk — Claude-powered story deep-dive
 // ---------------------------------------------------------------------------
 
@@ -880,5 +911,36 @@ export default {
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders });
+  },
+
+  // Cron trigger — dispatches GitHub Actions daily digest workflow
+  async scheduled(event, env, ctx) {
+    const token = env.GITHUB_TOKEN;
+    if (!token) {
+      await cronAlert(env, "GITHUB_TOKEN not set — cannot dispatch workflow");
+      return;
+    }
+
+    const resp = await fetch(
+      "https://api.github.com/repos/matttrainer-gif/the-morning-train/actions/workflows/daily-digest.yml/dispatches",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "MorningTrain-CronWorker/1.0",
+        },
+        body: JSON.stringify({ ref: "main" }),
+      }
+    );
+
+    if (resp.ok || resp.status === 204) {
+      console.log("Digest workflow dispatched successfully");
+    } else {
+      const err = await resp.text();
+      const msg = `GitHub dispatch failed: HTTP ${resp.status} — ${err}`;
+      console.error(msg);
+      await cronAlert(env, msg);
+    }
   },
 };
